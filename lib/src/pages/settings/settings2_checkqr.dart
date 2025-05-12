@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:logger/logger.dart';
 import 'settings3_camname.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // ✅ 추가
+
+final Logger logger = Logger();
 
 class CheckMonitoringPage extends StatefulWidget {
   final int cameraId;
@@ -27,9 +30,9 @@ class _CheckMonitoringPageState extends State<CheckMonitoringPage> {
   void initState() {
     super.initState();
 
-    print('📡 받은 deviceIP: ${widget.deviceIP}');
-    print('📡 받은 cameraId: ${widget.cameraId}');
-    print('📡 받은 deviceId: ${widget.deviceId}');
+    logger.i('📡 받은 deviceIP: ${widget.deviceIP}');
+    logger.i('📡 받은 cameraId: ${widget.cameraId}');
+    logger.i('📡 받은 deviceId: ${widget.deviceId}');
 
     _controller =
         WebViewController()
@@ -38,6 +41,7 @@ class _CheckMonitoringPageState extends State<CheckMonitoringPage> {
           ..setNavigationDelegate(
             NavigationDelegate(
               onWebResourceError: (error) {
+                logger.e('❌ WebView 로딩 실패: ${error.description}');
                 setState(() => isError = true);
               },
             ),
@@ -53,9 +57,19 @@ class _CheckMonitoringPageState extends State<CheckMonitoringPage> {
 
   Future<void> _completeSetupAndGoNext() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isSetup', true);
+    final userId = prefs.getInt('userId');
+    if (userId == null) return;
+
+    await prefs.setBool('isSetupComplete_${userId}', true);
+    await prefs.setInt('cameraId_${userId}', widget.cameraId);
+    await prefs.setInt('deviceId_${userId}', widget.deviceId);
+    await prefs.setString('deviceIP_${userId}', widget.deviceIP);
+
+    logger.i('✅ 장치 정보 저장 완료');
+
     if (!mounted) return;
 
+    logger.i('➡️ SettingsCamNamePage로 이동');
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -76,7 +90,6 @@ class _CheckMonitoringPageState extends State<CheckMonitoringPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ← 뒤로가기 버튼
             Padding(
               padding: const EdgeInsets.only(left: 12, top: 12),
               child: IconButton(
@@ -84,8 +97,6 @@ class _CheckMonitoringPageState extends State<CheckMonitoringPage> {
                 onPressed: () => Navigator.pop(context),
               ),
             ),
-
-            // 진행 바
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Container(
@@ -107,10 +118,7 @@ class _CheckMonitoringPageState extends State<CheckMonitoringPage> {
                 ),
               ),
             ),
-
             const SizedBox(height: 32),
-
-            // 텍스트 안내
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 24),
               child: Column(
@@ -132,10 +140,7 @@ class _CheckMonitoringPageState extends State<CheckMonitoringPage> {
                 ],
               ),
             ),
-
             const SizedBox(height: 24),
-
-            // WebView or fallback
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: ClipRRect(
@@ -152,6 +157,7 @@ class _CheckMonitoringPageState extends State<CheckMonitoringPage> {
                               const SizedBox(height: 16),
                               ElevatedButton(
                                 onPressed: () {
+                                  logger.i('🔄 WebView 재시도');
                                   setState(() {
                                     isError = false;
                                     _controller.loadRequest(
@@ -179,10 +185,7 @@ class _CheckMonitoringPageState extends State<CheckMonitoringPage> {
                 ),
               ),
             ),
-
             const Spacer(),
-
-            // Continue 버튼
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
               child: SizedBox(

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:logger/logger.dart'; // ✅ 추가
 import '../../../services/api_service.dart';
+
+final Logger logger = Logger(); // ✅ 로거 인스턴스
 
 class SettingsDangerZonePage extends StatefulWidget {
   final int cameraId;
@@ -16,7 +19,8 @@ class SettingsDangerZonePage extends StatefulWidget {
   });
 
   @override
-  State<SettingsDangerZonePage> createState() => _SettingsDangerZonePageState();
+  State<SettingsDangerZonePage> createState() =>
+      _SettingsDangerZonePageState();
 }
 
 class _SettingsDangerZonePageState extends State<SettingsDangerZonePage> {
@@ -28,24 +32,24 @@ class _SettingsDangerZonePageState extends State<SettingsDangerZonePage> {
   @override
   void initState() {
     super.initState();
-    _controller =
-        WebViewController()
-          ..setJavaScriptMode(JavaScriptMode.unrestricted)
-          ..setBackgroundColor(Colors.white)
-          ..setNavigationDelegate(
-            NavigationDelegate(
-              onWebResourceError: (error) {
-                setState(() => isWebError = true);
-              },
-            ),
-          )
-          ..loadRequest(
-            Uri.parse('${widget.deviceIP}/video_feed'),
-            headers: {
-              'Content-Type': 'application/json',
-              'ngrok-skip-browser-warning': 'true',
-            },
-          );
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.white)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onWebResourceError: (error) {
+            setState(() => isWebError = true);
+            logger.e('📡 WebView 로딩 실패: ${error.description}');
+          },
+        ),
+      )
+      ..loadRequest(
+        Uri.parse('${widget.deviceIP}/video_feed'),
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+      );
   }
 
   void toggleZone(int zone) {
@@ -73,14 +77,14 @@ class _SettingsDangerZonePageState extends State<SettingsDangerZonePage> {
 
     if (token == null) {
       setState(() => isLoading = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('인증 정보가 없습니다. 로그인이 필요합니다.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('인증 정보가 없습니다. 로그인이 필요합니다.')),
+      );
       return;
     }
 
-    print('[DangerZone] token: $token');
-    print('[DangerZone] 선택된 구역: $selectedZones');
+    logger.i('[DangerZone] token: $token');
+    logger.i('[DangerZone] 선택된 구역: $selectedZones');
 
     final result = await ApiService.setDangerZones(
       cameraId: widget.cameraId,
@@ -88,7 +92,7 @@ class _SettingsDangerZonePageState extends State<SettingsDangerZonePage> {
       token: token,
     );
 
-    print('[DangerZone] 응답 결과: $result');
+    logger.i('[DangerZone] 응답 결과: $result');
 
     setState(() => isLoading = false);
 
@@ -116,7 +120,7 @@ class _SettingsDangerZonePageState extends State<SettingsDangerZonePage> {
       child: SizedBox(
         width: double.infinity,
         child: AspectRatio(
-          aspectRatio: 16 / 9, // 1280x720 비율 유지
+          aspectRatio: 16 / 9,
           child: Stack(
             children: [
               if (isWebError)
@@ -128,7 +132,6 @@ class _SettingsDangerZonePageState extends State<SettingsDangerZonePage> {
                 )
               else
                 WebViewWidget(controller: _controller),
-
               GridView.count(
                 crossAxisCount: 3,
                 childAspectRatio: 142 / 80,
@@ -143,10 +146,9 @@ class _SettingsDangerZonePageState extends State<SettingsDangerZonePage> {
                     onTap: () => toggleZone(zone),
                     child: Container(
                       decoration: BoxDecoration(
-                        color:
-                            isSelected
-                                ? const Color(0x446A4DFF)
-                                : Colors.transparent,
+                        color: isSelected
+                            ? const Color(0x446A4DFF)
+                            : Colors.transparent,
                         border: Border.all(color: Colors.white, width: 1),
                       ),
                     ),
@@ -209,9 +211,7 @@ class _SettingsDangerZonePageState extends State<SettingsDangerZonePage> {
                   style: TextStyle(fontSize: 16, color: Color(0xFF090A0A)),
                 ),
                 const SizedBox(height: 16),
-
                 _buildZoneOverlay(),
-
                 const SizedBox(height: 40),
                 SizedBox(
                   width: double.infinity,
@@ -224,19 +224,16 @@ class _SettingsDangerZonePageState extends State<SettingsDangerZonePage> {
                         borderRadius: BorderRadius.circular(32),
                       ),
                     ),
-                    child:
-                        isLoading
-                            ? const CircularProgressIndicator(
+                    child: isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            'Continue',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
                               color: Colors.white,
-                            )
-                            : const Text(
-                              'Continue',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: Colors.white,
-                              ),
                             ),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 40),

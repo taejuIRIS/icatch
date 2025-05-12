@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:frontend1/services/api_service.dart';
 
 class DeviceListPage extends StatefulWidget {
   const DeviceListPage({super.key});
@@ -10,7 +9,10 @@ class DeviceListPage extends StatefulWidget {
 }
 
 class _DeviceListPageState extends State<DeviceListPage> {
-  List<Map<String, dynamic>> cameras = [];
+  List<Map<String, dynamic>> _cameras = [];
+  final Set<int> _selectedCameraIds = {};
+  bool _selectionMode = false;
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -19,124 +21,272 @@ class _DeviceListPageState extends State<DeviceListPage> {
   }
 
   Future<void> _fetchCameras() async {
-    final url = Uri.parse('http://ceprj.gachon.ac.kr:60004/api/cameras/user');
-    try {
-      final response = await http.get(url);
-      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    final cameras = await ApiService.fetchUserCameras2();
+    setState(() {
+      _cameras = cameras;
+      _isLoading = false;
+    });
+  }
 
-      if (response.statusCode == 200 && decoded['success'] == true) {
-        final List<dynamic> data = decoded['data'];
-        setState(() {
-          cameras = List<Map<String, dynamic>>.from(data);
-        });
-      } else {
-        debugPrint('❌ 카메라 정보 조회 실패: ${decoded['message']}');
+  Future<void> _deleteSelectedCameras() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: const Text('삭제 확인'),
+            content: const Text('선택한 카메라를 삭제하시겠습니까?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('취소'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('삭제'),
+              ),
+            ],
+          ),
+    );
+
+    if (confirmed == true) {
+      for (final id in _selectedCameraIds) {
+        await ApiService.deleteCamera(id);
       }
-    } catch (e) {
-      debugPrint('❌ 예외 발생: $e');
+      setState(() {
+        _selectionMode = false;
+        _selectedCameraIds.clear();
+      });
+      _fetchCameras();
     }
   }
 
-  Widget _buildCameraItem(Map<String, dynamic> camera) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
+  void _goToQRPage() {
+    Navigator.pushNamed(context, '/DeviceQRPage');
+  }
+
+  Widget _buildCameraCard(Map<String, dynamic> camera, int index) {
+    final id = camera['cameraId'];
+    final fullIp = camera['deviceIp']?.toString() ?? '';
+    final maskedIp =
+        fullIp.length >= 5
+            ? '●●●●●●●${fullIp.substring(fullIp.length)}'
+            : '●●●●●●●';
+
+    return GestureDetector(
+      onLongPress: () {
+        setState(() {
+          _selectionMode = true;
+          _selectedCameraIds.add(id);
+        });
+      },
+      onTap: () {
+        if (_selectionMode) {
+          setState(() {
+            _selectedCameraIds.contains(id)
+                ? _selectedCameraIds.remove(id)
+                : _selectedCameraIds.add(id);
+          });
+        }
+      },
+      child: Stack(
         children: [
-          Image.asset('assets/icons/camera_baby.png', width: 64, height: 64),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  camera['cameraName'] ?? '카메라',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
                 ),
-                Text(
-                  'ip : ${camera['ipAddress'] ?? '●●●●●●●'}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF6C7072),
+              ],
+            ),
+            child: Row(
+              children: [
+                Image.asset(
+                  'assets/images/camera_baby.png',
+                  width: 64,
+                  height: 64,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        camera['cameraName'] ?? '카메라',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'ip : $maskedIp',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
+          if (_selectionMode)
+            Positioned(
+              right: 30,
+              top: 16,
+              child: Icon(
+                _selectedCameraIds.contains(id)
+                    ? Icons.check_circle
+                    : Icons.radio_button_unchecked,
+                color:
+                    _selectedCameraIds.contains(id)
+                        ? Colors.deepPurple
+                        : Colors.grey,
+              ),
+            ),
         ],
       ),
     );
-  }
-
-  void _goToQRPage() {
-    Navigator.pushNamed(context, '/device_qr');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 24),
-              const Text(
-                '등록된 카메라 📸',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child:
-                    cameras.isEmpty
-                        ? const Center(child: Text('등록된 카메라가 없습니다.'))
-                        : ListView.builder(
-                          itemCount: cameras.length,
-                          itemBuilder:
-                              (context, index) =>
-                                  _buildCameraItem(cameras[index]),
+      appBar: AppBar(
+        title: const Text('카메라'),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: Colors.black,
+      ),
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 22,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          "등록된 카메라 📸",
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
+                        if (_cameras.isNotEmpty)
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectionMode = !_selectionMode;
+                                _selectedCameraIds.clear();
+                              });
+                            },
+                            child: Text(
+                              _selectionMode ? '취소' : '편집',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child:
+                        _cameras.isEmpty
+                            ? const Center(child: Text('등록된 카메라가 없습니다.'))
+                            : ListView.builder(
+                              itemCount: _cameras.length,
+                              itemBuilder:
+                                  (context, index) =>
+                                      _buildCameraCard(_cameras[index], index),
+                            ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              GestureDetector(
-                onTap: _goToQRPage,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 20,
-                    horizontal: 24,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF6A4DFF),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '카메라 등록!',
+      bottomSheet: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          child:
+              !_selectionMode
+                  ? InkWell(
+                    onTap: _goToQRPage,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6A4DFF),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.deepPurple.withOpacity(0.25),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '카메라 등록!',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'QR 코드를 통해 편리하게 카메라를 등록하세요!',
+                            style: TextStyle(fontSize: 13, color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                  : SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: _deleteSelectedCameras,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6A4DFF),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Delete',
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
                       ),
-                      SizedBox(height: 4),
-                      Text(
-                        'QR 코드를 통해 편리하게 카메라를 등록하세요!',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
-          ),
         ),
       ),
     );

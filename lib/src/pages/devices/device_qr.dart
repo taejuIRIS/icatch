@@ -1,9 +1,8 @@
-// This file represents the first step: QR code generation
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../services/api_service.dart'; // ✅ api_service 사용
 import '../../components/wifi_setup_modal.dart';
 import 'device_checkqr.dart';
 
@@ -53,7 +52,9 @@ class _DeviceQRPageState extends State<DeviceQRPage> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isSetup', true);
 
-    final deviceInfo = await fetchDeviceInfo(widget.userId);
+    final deviceInfo = await ApiService.fetchDeviceInfo(
+      widget.userId,
+    ); // ✅ api_service.dart 사용
     if (!mounted) return;
 
     if (deviceInfo != null) {
@@ -73,23 +74,6 @@ class _DeviceQRPageState extends State<DeviceQRPage> {
         context,
       ).showSnackBar(const SnackBar(content: Text("디바이스 정보가 아직 없습니다.")));
     }
-  }
-
-  Future<Map<String, dynamic>?> fetchDeviceInfo(int userId) async {
-    final url = Uri.parse(
-      'http://ceprj.gachon.ac.kr:60004/api/device/auth/authenticate?userId=$userId',
-    );
-    try {
-      final response = await http.get(url);
-      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
-      if ((response.statusCode == 200 || response.statusCode == 201) &&
-          decoded['success'] == true) {
-        return decoded['data'];
-      }
-    } catch (e) {
-      debugPrint('❌ 디바이스 정보 요청 실패: $e');
-    }
-    return null;
   }
 
   @override
@@ -116,7 +100,7 @@ class _DeviceQRPageState extends State<DeviceQRPage> {
                 ),
                 child: FractionallySizedBox(
                   alignment: Alignment.centerLeft,
-                  widthFactor: 1 / 6,
+                  widthFactor: 1 / 4,
                   child: Container(
                     decoration: BoxDecoration(
                       color: Color(0xFF6A4DFF),

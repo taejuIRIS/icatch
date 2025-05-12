@@ -1,27 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:logger/logger.dart';
+
 import '../components/camera_list_tab.dart';
-import '../components/camera_monitor_view.dart';
 import '../components/joystick_control.dart';
-import '../../services/api_service.dart';
 import '../components/live_time_widget.dart';
+import '../components/camera_monitor_view.dart';
+import '../../services/api_service.dart';
+import '../navbar/bottom_navbar.dart';
+import 'calendar_page.dart';
+import 'add_page.dart';
+import 'notification_page.dart';
+import 'personal_page.dart';
+
+final logger = Logger();
 
 class HomePage extends StatefulWidget {
-  final int? cameraId;
-  final int? deviceId;
-  final String? deviceIP;
-
-  const HomePage({super.key, this.cameraId, this.deviceId, this.deviceIP});
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  int _selectedIndex = 0; // 바텀바 인덱스
+  final int _selectedIndex = 0;
   bool isCameraConnected = false;
   List<Map<String, dynamic>> _cameraList = [];
   int? selectedCameraId;
+  int? selectedDeviceId;
   String? selectedDeviceIP;
 
   @override
@@ -30,41 +36,77 @@ class _HomePageState extends State<HomePage> {
     _loadCameraList();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadCameraList();
+  }
+
   Future<void> _loadCameraList() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('authToken');
-
     if (token == null) return;
 
     final result = await ApiService.fetchUserCameras(token);
     if (result['success']) {
       final cameras = List<Map<String, dynamic>>.from(result['data']);
+      final validCameras =
+          cameras.where((camera) {
+            final name = camera['cameraName'];
+            final ip = camera['deviceIp'];
+            return name != null &&
+                ip != null &&
+                ip.toString().trim().isNotEmpty;
+          }).toList();
 
-      if (cameras.isNotEmpty) {
-        setState(() {
-          _cameraList = cameras;
-          selectedCameraId = widget.cameraId ?? cameras[0]['cameraId'];
-          selectedDeviceIP =
-              widget.deviceIP ?? 'http://ceprj.gachon.ac.kr:60004';
+      setState(() {
+        _cameraList = validCameras;
+        if (validCameras.isNotEmpty && selectedCameraId == null) {
+          final first = validCameras.first;
+          selectedCameraId = first['cameraId'];
+          selectedDeviceId = first['deviceId'];
+          selectedDeviceIP = first['deviceIp'];
           isCameraConnected = true;
-        });
-      }
+
+          logger.i(
+            '📡 초기 선택된 카메라: IP=${first['deviceIp']}, ID=${first['cameraId']}, Device=${first['deviceId']}',
+          );
+        }
+      });
     } else {
-      print(result['message']);
+      logger.e('카메라 목록 불러오기 실패: ${result['message']}');
+      setState(() {
+        _cameraList = [];
+        isCameraConnected = false;
+      });
     }
   }
 
-  void _registerDevice() {
+  void _registerDevice() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getInt('userId');
+
+    if (userId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('로그인 정보가 없습니다.')));
+      return;
+    }
+
     showDialog(
       context: context,
       builder:
-          (context) => AlertDialog(
+          (_) => AlertDialog(
             title: const Text('카메라를 추가해 주세요!'),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  // TODO: 기기 등록 로직
+                  Navigator.pushNamed(
+                    context,
+                    '/DeviceQRPage',
+                    arguments: {'userId': userId},
+                  );
                 },
                 child: const Text(
                   '기기 등록',
@@ -111,8 +153,8 @@ class _HomePageState extends State<HomePage> {
               LiveTimeWidget(),
             ],
           ),
-          Column(
-            children: const [
+          const Column(
+            children: [
               Icon(Icons.water_drop, color: Colors.black),
               SizedBox(height: 4),
               Text(
@@ -126,15 +168,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // 화면별 위젯 리스트
-  List<Widget> get _pages => [
-    _buildCameraPage(), // 0번 탭: 홈
-    const Center(child: Text('캘린더 페이지')),
-    const Center(child: Text('추가 페이지')),
-    const Center(child: Text('알림 페이지')),
-    const Center(child: Text('프로필 페이지')),
-  ];
-
   Widget _buildCameraPage() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,19 +175,25 @@ class _HomePageState extends State<HomePage> {
         _buildHeader(),
         CameraListTab(
           cameraList: _cameraList,
+          selectedCameraId: selectedCameraId,
           onCameraSelected: (camera) {
             setState(() {
               selectedCameraId = camera['cameraId'];
-              selectedDeviceIP = 'http://ceprj.gachon.ac.kr:60004';
+              selectedDeviceId = camera['deviceId'];
+              selectedDeviceIP = camera['deviceIp'];
+              isCameraConnected = true;
+
+              logger.i(
+                '📷 선택된 카메라 변경됨 => cameraId: $selectedCameraId, deviceId: $selectedDeviceId, IP: $selectedDeviceIP',
+              );
             });
           },
           onAddPressed: _registerDevice,
         ),
-        if (isCameraConnected && selectedDeviceIP != null)
-          CameraMonitorView(deviceIP: selectedDeviceIP!)
-        else
-          Container(width: double.infinity, height: 220, color: Colors.black),
         const SizedBox(height: 12),
+        if (isCameraConnected && selectedDeviceIP != null)
+          CameraMonitorView(deviceIP: selectedDeviceIP!),
+        const SizedBox(height: 16),
         if (isCameraConnected && selectedCameraId != null)
           JoystickControl(cameraId: selectedCameraId!),
       ],
@@ -164,34 +203,39 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(child: _pages[_selectedIndex]),
-      bottomNavigationBar: BottomNavigationBar(
+      backgroundColor: Colors.white,
+      body: SafeArea(child: _buildCameraPage()),
+      bottomNavigationBar: BottomNavbar(
         currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF7A5FFF),
-        unselectedItemColor: Colors.grey,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: '홈'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
-            label: '캘린더',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add_circle_outline),
-            label: '추가',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications_none),
-            label: '알림',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: '프로필',
-          ),
-        ],
+        onTap: (index) {
+          if (index == _selectedIndex) return;
+
+          Widget nextPage;
+          switch (index) {
+            case 0:
+              nextPage = const HomePage();
+              break;
+            case 1:
+              nextPage = const CalendarPage();
+              break;
+            case 2:
+              nextPage = const AddPage();
+              break;
+            case 3:
+              nextPage = const NotificationPage();
+              break;
+            case 4:
+              nextPage = const PersonalPage();
+              break;
+            default:
+              return;
+          }
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => nextPage),
+          );
+        },
       ),
     );
   }

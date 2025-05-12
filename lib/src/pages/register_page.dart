@@ -148,7 +148,7 @@ class _RegisterPageState extends State<RegisterPage> {
             _buildInputField(
               label: 'Email',
               controller: _emailController,
-              hintText: 'you@aa.com',
+              hintText: 'youre@email.com',
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 20),

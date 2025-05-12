@@ -53,11 +53,10 @@ class _DeviceCheckQRPageState extends State<DeviceCheckQRPage> {
 
     if (!mounted) return;
 
-    Navigator.push(
-      context,
+    Navigator.of(context).push(
       MaterialPageRoute(
         builder:
-            (_) => DeviceCamNamePage(
+            (context) => DeviceCamNamePage(
               deviceId: widget.deviceId,
               deviceIP: widget.deviceIP,
             ),
@@ -96,7 +95,7 @@ class _DeviceCheckQRPageState extends State<DeviceCheckQRPage> {
                 ),
                 child: FractionallySizedBox(
                   alignment: Alignment.centerLeft,
-                  widthFactor: 2 / 6,
+                  widthFactor: 2 / 4,
                   child: Container(
                     decoration: BoxDecoration(
                       color: const Color(0xFF6A4DFF),

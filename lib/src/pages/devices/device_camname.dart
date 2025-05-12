@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../services/api_service.dart';
+import 'package:logger/logger.dart';
+
+final Logger logger = Logger();
 
 class DeviceCamNamePage extends StatefulWidget {
   final int deviceId;
@@ -17,23 +20,32 @@ class DeviceCamNamePage extends StatefulWidget {
 }
 
 class _DeviceCamNamePageState extends State<DeviceCamNamePage> {
-  final TextEditingController _controller = TextEditingController();
-  bool isLoading = false;
+  final TextEditingController _camNameController = TextEditingController();
+  bool _isLoading = false;
 
-  Future<void> _submit() async {
-    final camName = _controller.text.trim();
+  Future<void> _handleContinue() async {
+    final camName = _camNameController.text.trim();
+
     if (camName.isEmpty) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("카메라 이름을 입력해 주세요.")));
+      ).showSnackBar(const SnackBar(content: Text('카메라 이름을 입력해 주세요.')));
       return;
     }
 
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getInt('userId');
-    if (userId == null) return;
 
-    setState(() => isLoading = true);
+    if (userId == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('사용자 정보를 불러올 수 없습니다.')));
+      return;
+    }
+
+    setState(() => _isLoading = true);
 
     final result = await ApiService.createCameraName(
       userId: userId,
@@ -41,13 +53,17 @@ class _DeviceCamNamePageState extends State<DeviceCamNamePage> {
       name: camName,
     );
 
-    setState(() => isLoading = false);
+    logger.i('📦 API 응답: $result');
 
-    if (result['success'] == true) {
-      final cameraId = result['data']['cameraId'];
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    final cameraId = result['cameraId'];
+
+    if (result['success'] == true && cameraId != null) {
       Navigator.pushNamed(
         context,
-        '/settingsTargets',
+        '/DeviceDangerZonePage',
         arguments: {
           'cameraId': cameraId,
           'deviceId': widget.deviceId,
@@ -55,9 +71,10 @@ class _DeviceCamNamePageState extends State<DeviceCamNamePage> {
         },
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message'] ?? "카메라 이름 설정 실패")),
-      );
+      final message = result['message'] ?? '카메라 ID를 받아오지 못했습니다.';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -76,7 +93,6 @@ class _DeviceCamNamePageState extends State<DeviceCamNamePage> {
                 onPressed: () => Navigator.pop(context),
               ),
               const SizedBox(height: 24),
-              // 진행바
               Container(
                 height: 6,
                 width: double.infinity,
@@ -86,7 +102,7 @@ class _DeviceCamNamePageState extends State<DeviceCamNamePage> {
                 ),
                 child: FractionallySizedBox(
                   alignment: Alignment.centerLeft,
-                  widthFactor: 3 / 6,
+                  widthFactor: 3 / 4,
                   child: Container(
                     decoration: BoxDecoration(
                       color: const Color(0xFF6A4DFF),
@@ -97,23 +113,23 @@ class _DeviceCamNamePageState extends State<DeviceCamNamePage> {
               ),
               const SizedBox(height: 40),
               const Text(
-                '좋아요!',
+                '멋지네요!',
                 style: TextStyle(
-                  fontSize: 32,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF090A0A),
                 ),
               ),
               const SizedBox(height: 8),
               const Text(
-                '이번 홈캠은 어디에 두시나요?',
+                '홈캠을 두신 위치를 알려 주세요!',
                 style: TextStyle(fontSize: 16, color: Color(0xFF090A0A)),
               ),
               const SizedBox(height: 24),
               TextField(
-                controller: _controller,
+                controller: _camNameController,
                 decoration: InputDecoration(
-                  hintText: '예: 거실, 부엌, 현관',
+                  hintText: '예: 안방, 거실, 창문 근처 등',
                   filled: true,
                   fillColor: Colors.white,
                   border: OutlineInputBorder(
@@ -131,7 +147,7 @@ class _DeviceCamNamePageState extends State<DeviceCamNamePage> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: isLoading ? null : _submit,
+                  onPressed: _isLoading ? null : _handleContinue,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF6A4DFF),
                     shape: RoundedRectangleBorder(
@@ -139,7 +155,7 @@ class _DeviceCamNamePageState extends State<DeviceCamNamePage> {
                     ),
                   ),
                   child:
-                      isLoading
+                      _isLoading
                           ? const CircularProgressIndicator(color: Colors.white)
                           : const Text(
                             'Continue',

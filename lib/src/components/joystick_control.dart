@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
+import 'package:logger/logger.dart';
+
+final Logger logger = Logger();
 
 class JoystickControl extends StatelessWidget {
   final int cameraId;
@@ -11,7 +14,7 @@ class JoystickControl extends StatelessWidget {
     final token = prefs.getString('authToken');
 
     if (token == null || token.isEmpty) {
-      print('❌ 토큰 없음');
+      logger.i('❌ 토큰 없음');
       return;
     }
 
@@ -25,43 +28,92 @@ class JoystickControl extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(top: 24),
+      margin: const EdgeInsets.only(top: 32),
       child: Center(
         child: Stack(
           alignment: Alignment.center,
           children: [
-            Image.asset(
-              'assets/images/joystick.png',
-              width: 160,
-              height: 160,
-              fit: BoxFit.cover,
+            // 바깥 원
+            Container(
+              width: 240,
+              height: 240,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0EDFF),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color.fromARGB(
+                      255,
+                      103,
+                      58,
+                      183,
+                    ).withOpacity(0.1),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
             ),
+
+            // 상단 화살표
             Positioned(
-              top: 20,
+              top: 24,
               child: IconButton(
-                icon: const Icon(Icons.keyboard_arrow_up, size: 36, color: Color(0xFF7A5FFF)),
+                icon: const Icon(
+                  Icons.arrow_drop_up,
+                  size: 40,
+                  color: Color(0xFF6A4DFF),
+                ),
                 onPressed: () => _handleDirection("up"),
               ),
             ),
+
+            // 하단 화살표
             Positioned(
-              bottom: 20,
+              bottom: 24,
               child: IconButton(
-                icon: const Icon(Icons.keyboard_arrow_down, size: 36, color: Color(0xFF7A5FFF)),
+                icon: const Icon(
+                  Icons.arrow_drop_down,
+                  size: 40,
+                  color: Color(0xFF6A4DFF),
+                ),
                 onPressed: () => _handleDirection("down"),
               ),
             ),
+
+            // 좌측 화살표
             Positioned(
-              left: 20,
+              left: 24,
               child: IconButton(
-                icon: const Icon(Icons.keyboard_arrow_left, size: 36, color: Color(0xFF7A5FFF)),
+                icon: const Icon(
+                  Icons.arrow_left,
+                  size: 40,
+                  color: Color(0xFF6A4DFF),
+                ),
                 onPressed: () => _handleDirection("left"),
               ),
             ),
+
+            // 우측 화살표
             Positioned(
-              right: 20,
+              right: 24,
               child: IconButton(
-                icon: const Icon(Icons.keyboard_arrow_right, size: 36, color: Color(0xFF7A5FFF)),
+                icon: const Icon(
+                  Icons.arrow_right,
+                  size: 40,
+                  color: Color(0xFF6A4DFF),
+                ),
                 onPressed: () => _handleDirection("right"),
+              ),
+            ),
+
+            // 중앙 버튼
+            Container(
+              width: 96,
+              height: 96,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFF6A4DFF),
               ),
             ),
           ],

@@ -1,4 +1,3 @@
-// ✅ settings6_gestures.dart 수정 완료본
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../services/api_service.dart';
@@ -67,24 +66,9 @@ class _SettingsGesturePageState extends State<SettingsGesturePage> {
       'image': 'assets/images/Gestures/Gesture_prom.png',
     },
     {
-      'name': '가위 제스처',
-      'description': '가위 모양 손동작',
-      'image': 'assets/images/Gestures/Gesture_scissors.png',
-    },
-    {
-      'name': '위 손동작',
-      'description': '손을 위로 향한 제스처',
-      'image': 'assets/images/Gestures/Gesture_top.png',
-    },
-    {
       'name': '엄지 위로',
       'description': '엄지 위로 제스처',
       'image': 'assets/images/Gestures/Gesture_up.png',
-    },
-    {
-      'name': 'X 손동작',
-      'description': '손으로 X자 모양',
-      'image': 'assets/images/Gestures/Gesture_X.png',
     },
   ];
 
@@ -100,6 +84,7 @@ class _SettingsGesturePageState extends State<SettingsGesturePage> {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getInt('userId');
     if (!mounted) return;
+
     if (userId == null) {
       setState(() => isLoading = false);
       ScaffoldMessenger.of(
@@ -108,25 +93,26 @@ class _SettingsGesturePageState extends State<SettingsGesturePage> {
       return;
     }
 
-    final selected = gestures[selectedIndex!];
+    final gesture = gestures[selectedIndex!];
     final result = await ApiService.createGestureWithFunction(
       userId: userId,
       cameraId: widget.cameraId,
-      gestureName: selected['name']!,
+      gestureName: gesture['name']!,
       gestureType: 'hand',
-      gestureDescription: selected['description']!,
-      gestureImagePath: selected['image']!,
+      gestureDescription: gesture['description']!,
+      gestureImagePath: gesture['image']!,
       selectedFunction: selectedFunction!,
+      actionId: selectedIndex! + 1,
     );
 
     setState(() => isLoading = false);
     if (!mounted) return;
 
     if (result['success']) {
-      await prefs.setBool('isSetupComplete', true);
-      await prefs.setInt('cameraId', widget.cameraId);
-      await prefs.setInt('deviceId', widget.deviceId);
-      await prefs.setString('deviceIP', widget.deviceIP);
+      await prefs.setBool('isSetupComplete_$userId', true);
+      await prefs.setInt('cameraId_$userId', widget.cameraId);
+      await prefs.setInt('deviceId_$userId', widget.deviceId);
+      await prefs.setString('deviceIP_$userId', widget.deviceIP);
 
       Navigator.pushNamedAndRemoveUntil(
         context,
@@ -160,14 +146,14 @@ class _SettingsGesturePageState extends State<SettingsGesturePage> {
           ),
     );
 
-    if (result != null) {
-      setState(() => selectedFunction = result);
-    } else {
-      setState(() {
+    setState(() {
+      if (result != null) {
+        selectedFunction = result;
+      } else {
         selectedIndex = null;
         selectedFunction = null;
-      });
-    }
+      }
+    });
   }
 
   @override
@@ -175,111 +161,133 @@ class _SettingsGesturePageState extends State<SettingsGesturePage> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 12),
-              IconButton(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: IconButton(
                 icon: const Icon(Icons.arrow_back_ios),
                 onPressed: () => Navigator.pop(context),
               ),
-              const SizedBox(height: 6),
-              Container(
-                height: 6,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(100),
-                ),
-                child: FractionallySizedBox(
-                  alignment: Alignment.centerLeft,
-                  widthFactor: 1.0,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF6A4DFF),
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-              const Text(
+            ),
+            const SizedBox(height: 6),
+            _buildProgressBar(),
+            const SizedBox(height: 32),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
                 '마지막으로',
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 8),
-              const Text(
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
                 '제스처를 등록할까요? 사용하실 손동작을 선택해 주세요!',
                 style: TextStyle(fontSize: 16),
               ),
-              const SizedBox(height: 24),
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: gestures.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemBuilder: (context, index) {
-                  final gesture = gestures[index];
-                  final isSelected = selectedIndex == index;
-                  return GestureDetector(
-                    onTap: () => _onGestureTap(index),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Image.asset(gesture['image']!, fit: BoxFit.cover),
-                          if (isSelected)
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.deepPurple.withOpacity(0.35),
-                                border: Border.all(
-                                  color: Colors.deepPurple,
-                                  width: 3,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                        ],
+            ),
+            const SizedBox(height: 24),
+            _buildGestureGrid(),
+          ],
+        ),
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+        child: SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: ElevatedButton(
+            onPressed: isLoading ? null : _submitGesture,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6A4DFF),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(32),
+              ),
+            ),
+            child:
+                isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                      'Done',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
                     ),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: isLoading ? null : _submitGesture,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6A4DFF),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(32),
-                    ),
-                  ),
-                  child:
-                      isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                            'Done',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProgressBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Container(
+        height: 6,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade300,
+          borderRadius: BorderRadius.circular(100),
+        ),
+        child: FractionallySizedBox(
+          alignment: Alignment.centerLeft,
+          widthFactor: 1.0,
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF6A4DFF),
+              borderRadius: BorderRadius.circular(100),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGestureGrid() {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: GridView.builder(
+          itemCount: gestures.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+          ),
+          itemBuilder: (context, index) {
+            final gesture = gestures[index];
+            final isSelected = selectedIndex == index;
+            return GestureDetector(
+              onTap: () => _onGestureTap(index),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.asset(gesture['image']!, fit: BoxFit.cover),
+                    if (isSelected)
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.deepPurple.withAlpha(
+                            (0.35 * 255).toInt(),
                           ),
+                          border: Border.all(
+                            color: Colors.deepPurple,
+                            width: 3,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 40),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

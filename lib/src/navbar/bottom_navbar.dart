@@ -13,6 +13,7 @@ class BottomNavbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
+      backgroundColor: Colors.white,
       currentIndex: currentIndex,
       onTap: onTap,
       type: BottomNavigationBarType.fixed,
@@ -24,6 +25,7 @@ class BottomNavbar extends StatelessWidget {
         BottomNavigationBarItem(
           icon: Icon(
             Icons.home,
+            size: 30,
             color: currentIndex == 0 ? const Color(0xFF7A5FFF) : Colors.grey,
           ),
           label: '홈',
@@ -38,7 +40,7 @@ class BottomNavbar extends StatelessWidget {
         BottomNavigationBarItem(
           icon: Icon(
             Icons.add_circle_outline,
-            size: 28,
+            size: 30,
             color: currentIndex == 2 ? const Color(0xFF7A5FFF) : Colors.grey,
           ),
           label: '추가',
@@ -46,6 +48,7 @@ class BottomNavbar extends StatelessWidget {
         BottomNavigationBarItem(
           icon: Icon(
             Icons.notifications_none,
+            size: 30,
             color: currentIndex == 3 ? const Color(0xFF7A5FFF) : Colors.grey,
           ),
           label: '알림',
@@ -53,6 +56,7 @@ class BottomNavbar extends StatelessWidget {
         BottomNavigationBarItem(
           icon: Icon(
             currentIndex == 4 ? Icons.person : Icons.person_outline,
+            size: 30,
             color: currentIndex == 4 ? const Color(0xFF7A5FFF) : Colors.grey,
           ),
           label: '프로필',

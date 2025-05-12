@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../services/api_service.dart';
+import 'package:logger/logger.dart';
+
+final Logger logger = Logger();
 
 class SettingsCamNamePage extends StatefulWidget {
   final int deviceId;
-  final String deviceIP; // ✅ 추가
+  final String deviceIP;
 
   const SettingsCamNamePage({
     super.key,
     required this.deviceId,
-    required this.deviceIP, // ✅ 추가
+    required this.deviceIP,
   });
 
   @override
@@ -50,34 +53,26 @@ class _SettingsCamNamePageState extends State<SettingsCamNamePage> {
       name: camName,
     );
 
-    print('📦 API 응답: $result');
+    logger.i('📦 API 응답: $result');
 
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    if (result['success'] == true || result['success'].toString() == 'true') {
-      final data = result['data'];
-      if (data == null || data['cameraId'] == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('카메라 ID를 받아오지 못했습니다.')));
-        return;
-      }
+    final cameraId = result['cameraId'];
 
-      final int cameraId = data['cameraId'];
-
+    if (result['success'] == true && cameraId != null) {
       Navigator.pushNamed(
         context,
         '/settingsTargets',
         arguments: {
           'cameraId': cameraId,
           'deviceId': widget.deviceId,
-          'deviceIP': widget.deviceIP, // ✅ 전달
+          'deviceIP': widget.deviceIP,
           'camName': camName,
         },
       );
     } else {
-      final message = result['message'] ?? '카메라 이름 설정 실패';
+      final message = result['message'] ?? '카메라 ID를 받아오지 못했습니다.';
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(message)));

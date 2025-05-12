@@ -1,10 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:logger/logger.dart';
 import '../../components/wifi_setup_modal.dart';
-import 'settings2_checkqr.dart'; // CheckMonitoringPage import
+import '../../../services/api_service.dart';
+import 'settings2_checkqr.dart';
+
+final Logger logger = Logger();
 
 class SettingsQRPage extends StatefulWidget {
   final int userId;
@@ -41,7 +44,7 @@ class _SettingsQRPageState extends State<SettingsQRPage> {
               final wifiJson = {
                 'userId': widget.userId,
                 'ssid': _ssidController.text,
-                'password': _passwordController.text, // 무조건 포함, 빈 문자열이라도
+                'password': _passwordController.text,
               };
 
               setState(() {
@@ -56,14 +59,21 @@ class _SettingsQRPageState extends State<SettingsQRPage> {
 
   Future<void> _completeSetupAndGoHome() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isSetup', true);
+    await prefs.setBool('isSetup_${widget.userId}', true);
 
-    final deviceInfo = await fetchDeviceInfo(widget.userId);
-    print('✅ 디바이스 정보: $deviceInfo');
+    final deviceInfo = await ApiService.fetchDeviceInfo(widget.userId);
+    logger.i('✅ 디바이스 정보: $deviceInfo');
 
     if (!mounted) return;
 
     if (deviceInfo != null) {
+      await prefs.setInt('cameraId_${widget.userId}', deviceInfo['cameraId']);
+      await prefs.setInt('deviceId_${widget.userId}', deviceInfo['deviceId']);
+      await prefs.setString(
+        'deviceIP_${widget.userId}',
+        deviceInfo['deviceIP'],
+      );
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -79,34 +89,6 @@ class _SettingsQRPageState extends State<SettingsQRPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("디바이스 정보가 아직 없습니다.")));
-    }
-  }
-
-  Future<Map<String, dynamic>?> fetchDeviceInfo(int userId) async {
-    final url = Uri.parse(
-      'http://ceprj.gachon.ac.kr:60004/api/device/auth/authenticate?userId=$userId',
-    );
-
-    try {
-      final response = await http.get(url);
-      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
-
-      print('✅ 서버 응답: $decoded');
-      print('📦 response.statusCode: ${response.statusCode}');
-      print('✅ success의 타입: ${decoded['success'].runtimeType}');
-      print('✅ success의 값: ${decoded['success']}');
-
-      // ✅ 핵심 조건 수정
-      if ((response.statusCode == 200 || response.statusCode == 201) &&
-          decoded['success'] == true) {
-        return decoded['data'];
-      } else {
-        print('❌ 서버 응답 실패 또는 success false');
-        return null;
-      }
-    } catch (e) {
-      debugPrint('❌ 디바이스 정보 요청 실패: $e');
-      return null;
     }
   }
 

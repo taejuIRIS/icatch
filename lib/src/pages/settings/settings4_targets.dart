@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:logger/logger.dart'; // ✅ logger 추가
 import '../../../services/api_service.dart';
+
+final Logger logger = Logger(); // ✅ logger 인스턴스 생성
 
 class SettingsTargetsPage extends StatefulWidget {
   const SettingsTargetsPage({super.key});
@@ -25,11 +28,11 @@ class _SettingsTargetsPageState extends State<SettingsTargetsPage> {
       cameraId = args['cameraId'];
       deviceId = args['deviceId'];
       deviceIP = args['deviceIP'];
-      print(
+      logger.i(
         '[SettingsTargetsPage] 전달받은 cameraId: $cameraId, deviceId: $deviceId, deviceIP: $deviceIP',
       );
     } else {
-      debugPrint('❗ settings.arguments가 null이거나 잘못된 타입입니다.');
+      logger.e('❗ settings.arguments가 null이거나 잘못된 타입입니다.');
       Navigator.pop(context);
     }
   }
@@ -57,9 +60,8 @@ class _SettingsTargetsPageState extends State<SettingsTargetsPage> {
     final String targetType = selectedTarget == '사람' ? 'person' : 'pet';
     setState(() => isLoading = true);
 
-    // ✅ 로그 출력
-    print('[SettingsTargetsPage] 선택된 대상: $selectedTarget ($targetType)');
-    print('[SettingsTargetsPage] userId: $userId, cameraId: $cameraId');
+    logger.i('[SettingsTargetsPage] 선택된 대상: $selectedTarget ($targetType)');
+    logger.i('[SettingsTargetsPage] userId: $userId, cameraId: $cameraId');
 
     final result = await ApiService.setTargetType(
       userId: userId,
@@ -67,7 +69,7 @@ class _SettingsTargetsPageState extends State<SettingsTargetsPage> {
       targetType: targetType,
     );
 
-    print('[SettingsTargetsPage] API 응답: $result');
+    logger.i('[SettingsTargetsPage] API 응답: $result');
 
     if (!mounted) return;
     setState(() => isLoading = false);
@@ -180,17 +182,16 @@ class _SettingsTargetsPageState extends State<SettingsTargetsPage> {
                       borderRadius: BorderRadius.circular(32),
                     ),
                   ),
-                  child:
-                      isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                            'Continue',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Colors.white,
-                            ),
+                  child: isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                          'Continue',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.white,
                           ),
+                        ),
                 ),
               ),
               const SizedBox(height: 40),

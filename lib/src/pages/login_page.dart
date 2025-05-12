@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:logger/logger.dart';
 import '../styles/input_styles.dart';
 import '../../services/api_service.dart';
+
+final Logger logger = Logger();
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -27,11 +30,11 @@ class _LoginPageState extends State<LoginPage> {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    print('📤 로그인 요청: email=$email, password=$password');
+    logger.i('📤 로그인 요청: email=$email, password=$password');
 
     final res = await ApiService.login(email: email, password: password);
 
-    print('📥 로그인 응답: $res');
+    logger.i('📥 로그인 응답: $res');
 
     if (!mounted) return;
 
@@ -39,11 +42,11 @@ class _LoginPageState extends State<LoginPage> {
       final token = res['data']['token'];
       final userId = res['data']['userId'];
 
-      print('✅ 로그인 성공 - token: $token');
-      print('✅ 로그인 성공 - userId: $userId');
+      logger.i('✅ 로그인 성공 - token: $token');
+      logger.i('✅ 로그인 성공 - userId: $userId');
 
       if (token == null || token.isEmpty || userId == null) {
-        print('❌ token 또는 userId가 null');
+        logger.e('❌ token 또는 userId가 null');
         _showError('로그인 실패: 사용자 정보가 없습니다.');
         return;
       }
@@ -51,21 +54,27 @@ class _LoginPageState extends State<LoginPage> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('authToken', token);
       await prefs.setInt('userId', userId);
-      print('📦 토큰 저장 완료');
+      logger.i('📦 토큰 저장 완료');
 
-      final isSetupComplete = prefs.getBool('isSetupComplete') ?? false;
-      final cameraId = prefs.getInt('cameraId');
-      final deviceId = prefs.getInt('deviceId');
-      final deviceIP = prefs.getString('deviceIP');
+      // ✅ userId 기반 키로 설정 여부 및 정보 불러오기
+      final isSetupComplete = prefs.getBool('isSetupComplete_$userId') ?? false;
+      final cameraId = prefs.getInt('cameraId_$userId');
+      final deviceId = prefs.getInt('deviceId_$userId');
+      final deviceIP = prefs.getString('deviceIP_$userId');
 
-      print('🧾 설정 여부: $isSetupComplete');
-      print('🧾 cameraId: $cameraId, deviceId: $deviceId, deviceIP: $deviceIP');
+      logger.i('🧾 설정 여부: $isSetupComplete');
+      logger.i(
+        '🧾 cameraId: $cameraId, deviceId: $deviceId, deviceIP: $deviceIP',
+      );
+
+      //logger.i('🧪 테스트: 무조건 QR 설정 화면으로 이동');
+      //Navigator.pushReplacementNamed(context, '/settingsqr', arguments: userId);
 
       if (isSetupComplete &&
           cameraId != null &&
           deviceId != null &&
           deviceIP != null) {
-        print('➡️ 홈으로 이동');
+        logger.i('➡️ 홈으로 이동');
         Navigator.pushReplacementNamed(
           context,
           '/home',
@@ -76,7 +85,7 @@ class _LoginPageState extends State<LoginPage> {
           },
         );
       } else {
-        print('➡️ QR 설정 화면으로 이동');
+        logger.i('➡️ QR 설정 화면으로 이동');
         Navigator.pushReplacementNamed(
           context,
           '/settingsqr',
@@ -84,7 +93,7 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
     } else {
-      print('❌ 로그인 실패 - 메시지: ${res['message']}');
+      logger.e('❌ 로그인 실패 - 메시지: ${res['message']}');
       _showError(res['message'] ?? '이메일 혹은 비밀번호가 올바르지 않습니다.');
     }
   }

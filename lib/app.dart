@@ -9,7 +9,18 @@ import 'src/pages/settings/settings4_targets.dart';
 import 'src/pages/settings/settings5_dangerzone.dart';
 import 'src/pages/settings/settings6_gestures.dart';
 import 'src/pages/home_page.dart';
-import 'src/pages/devices/device_list.dart'; // ✅ 추가
+import 'src/pages/devices/device_list.dart';
+import 'src/pages/devices/device_qr.dart';
+import 'src/pages/devices/device_checkqr.dart';
+import 'src/pages/devices/device_dangerzone.dart';
+import 'src/pages/gestures/gesture_add_page.dart';
+import 'src/pages/add_page.dart';
+import 'src/pages/splash_page.dart';
+import 'src/pages/targets/targets_add_page.dart';
+import 'src/pages/personal_page.dart';
+import 'src/pages/album/album_list_page.dart';
+import 'src/pages/album/album_details_page.dart';
+import 'src/pages/calendar_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -23,6 +34,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'iCatch',
       debugShowCheckedModeBanner: false,
+      home: SplashPage(), // 첫 시작 화면
       theme: ThemeData(
         scaffoldBackgroundColor: Colors.white,
         primarySwatch: Colors.deepPurple,
@@ -95,20 +107,80 @@ class MyApp extends StatelessWidget {
                     deviceIP: args['deviceIP'],
                   ),
             );
-
           case '/home':
-            final args = settings.arguments as Map<String, dynamic>?;
+            return MaterialPageRoute(builder: (_) => const HomePage());
+
+          case '/AddPage':
+            return MaterialPageRoute(builder: (_) => const AddPage());
+
+          case '/GestureAddPage':
             return MaterialPageRoute(
-              builder:
-                  (_) => HomePage(
-                    cameraId: args?['cameraId'],
-                    deviceId: args?['deviceId'],
-                    deviceIP: args?['deviceIP'],
-                  ),
+              builder: (_) => const GestureAddPage(),
+              settings: settings, // arguments 유지 필수
             );
 
           case '/deviceList': // ✅ 추가된 라우트
             return MaterialPageRoute(builder: (_) => const DeviceListPage());
+
+          case '/DeviceQRPage':
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder: (_) => DeviceQRPage(userId: args['userId']),
+            );
+
+          case '/DeviceCheckQRPage':
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder:
+                  (_) => DeviceCheckQRPage(
+                    cameraId: args['cameraId'],
+                    deviceId: args['deviceId'],
+                    deviceIP: args['deviceIP'],
+                  ),
+            );
+
+          case '/DeviceDangerZonePage':
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder:
+                  (_) => DeviceDangerZonePage(
+                    cameraId: args['cameraId'],
+                    deviceId: args['deviceId'],
+                    deviceIP: args['deviceIP'],
+                  ),
+            );
+          case '/targetsAddPage':
+            final args = settings.arguments as Map<String, dynamic>?;
+            if (args == null) {
+              return MaterialPageRoute(
+                builder:
+                    (_) => const Scaffold(
+                      body: Center(
+                        child: Text('Missing arguments for TargetsAddPage'),
+                      ),
+                    ),
+              );
+            }
+
+            return MaterialPageRoute(
+              builder: (_) => TargetsAddPage(),
+              settings: RouteSettings(arguments: args), // 전달 그대로 유지
+            );
+
+          case '/PersonalPage':
+            return MaterialPageRoute(builder: (_) => const PersonalPage());
+
+          case '/AlbumListPage':
+            return MaterialPageRoute(builder: (_) => const AlbumListPage());
+
+          case '/AlbumDetailPage':
+            final args = settings.arguments as Map<String, dynamic>;
+            return MaterialPageRoute(
+              builder: (_) => AlbumDetailPage(imageId: args['imageId']),
+            );
+
+          case '/CalendarPage':
+            return MaterialPageRoute(builder: (_) => const CalendarPage());
 
           default:
             return MaterialPageRoute(
