@@ -136,20 +136,17 @@ class _NotificationPageState extends State<NotificationPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       bottomNavigationBar: BottomNavbar(
-        currentIndex: 3,
+        currentIndex: 2,
         onTap: (index) {
-          if (index == 3) return;
+          if (index == 2) return;
           switch (index) {
             case 0:
               Navigator.pushReplacementNamed(context, '/home');
               break;
             case 1:
-              Navigator.pushReplacementNamed(context, '/CalendarPage');
-              break;
-            case 2:
               Navigator.pushReplacementNamed(context, '/AddPage');
               break;
-            case 4:
+            case 3:
               Navigator.pushReplacementNamed(context, '/PersonalPage');
               break;
           }
@@ -261,3 +258,4 @@ class _NotificationPageState extends State<NotificationPage> {
     );
   }
 }
+

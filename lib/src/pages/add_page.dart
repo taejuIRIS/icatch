@@ -2,10 +2,6 @@
 import 'package:flutter/material.dart';
 import '../navbar/bottom_navbar.dart';
 import '../../services/api_service.dart';
-import 'home_page.dart';
-import 'calendar_page.dart';
-import 'notification_page.dart';
-import 'personal_page.dart';
 import '../../utils/shared_pref_helper.dart';
 import 'package:logger/logger.dart';
 
@@ -31,7 +27,7 @@ class AddPage extends StatefulWidget {
 }
 
 class _AddPageState extends State<AddPage> {
-  final int _selectedIndex = 2;
+  final int _selectedIndex = 1;
   List<dynamic> _gestures = [];
   final Set<int> _selectedGestureIds = {};
   bool _selectionMode = false;
@@ -89,17 +85,21 @@ class _AddPageState extends State<AddPage> {
 
   void _onItemTapped(int index) {
     if (index == _selectedIndex) return;
-    final pages = [
-      const HomePage(),
-      const CalendarPage(),
-      const AddPage(),
-      const NotificationPage(),
-      const PersonalPage(),
-    ];
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => pages[index]),
-    );
+
+    switch (index) {
+      case 0:
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
+      case 1:
+        Navigator.pushReplacementNamed(context, '/AddPage');
+        break;
+      case 2:
+        Navigator.pushReplacementNamed(context, '/NotificationPage');
+        break;
+      case 3:
+        Navigator.pushReplacementNamed(context, '/PersonalPage');
+        break;
+    }
   }
 
   Future<void> _navigateToGestureAddPage() async {

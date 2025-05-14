@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../services/api_service.dart';
 import 'album_details_page.dart';
+import 'package:logger/logger.dart';
+
+final Logger logger = Logger();
 
 class AlbumListPage extends StatefulWidget {
   const AlbumListPage({super.key});
@@ -35,6 +38,7 @@ class _AlbumListPageState extends State<AlbumListPage> {
       );
       setState(() {
         pictures = result;
+        if (!isEditMode) selectedIds.clear();
       });
     } catch (e) {
       logger.i('사진 불러오기 실패: $e');
@@ -58,6 +62,40 @@ class _AlbumListPageState extends State<AlbumListPage> {
     _loadPictures();
   }
 
+  void _toggleSelectAll() {
+    setState(() {
+      if (selectedIds.length == pictures.length) {
+        selectedIds.clear();
+      } else {
+        selectedIds = pictures.map<int>((p) => p['imageId'] as int).toSet();
+      }
+    });
+  }
+
+  void _confirmDeleteDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('삭제'),
+            content: const Text('선택한 사진을 삭제하시겠습니까?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('아니요', style: TextStyle(color: Colors.red)),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  _deleteSelectedPictures();
+                },
+                child: const Text('예'),
+              ),
+            ],
+          ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -67,7 +105,11 @@ class _AlbumListPageState extends State<AlbumListPage> {
         actions: [
           TextButton(
             onPressed: () {
-              setState(() => isEditMode = !isEditMode);
+              if (isEditMode && pictures.isNotEmpty) {
+                _toggleSelectAll();
+              } else {
+                setState(() => isEditMode = !isEditMode);
+              }
             },
             child: Text(
               isEditMode ? '전체 선택' : '편집',
@@ -78,15 +120,19 @@ class _AlbumListPageState extends State<AlbumListPage> {
         iconTheme: const IconThemeData(color: Colors.black),
       ),
       bottomNavigationBar:
-          isEditMode && selectedIds.isNotEmpty
+          isEditMode
               ? Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: SizedBox(
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: _deleteSelectedPictures,
+                    onPressed: () {
+                      if (selectedIds.isNotEmpty) {
+                        _confirmDeleteDialog(context); // ✅ 팝업 추가
+                      }
+                    },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF7A5FFF),
+                      backgroundColor: const Color(0xFF6A4DFF),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
@@ -114,13 +160,12 @@ class _AlbumListPageState extends State<AlbumListPage> {
                   crossAxisCount: 2,
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
-                  childAspectRatio: 0.8,
+                  childAspectRatio: 1,
                 ),
                 itemBuilder: (context, index) {
                   final pic = pictures[index];
                   final imageUrl =
                       'http://ceprj.gachon.ac.kr:60004${pic['imageUrl']}';
-                  final captureTime = pic['formattedCaptureTime'] ?? '';
                   final imageId = pic['imageId'];
                   final isSelected = selectedIds.contains(imageId);
 
@@ -143,45 +188,47 @@ class _AlbumListPageState extends State<AlbumListPage> {
                         });
                       }
                     },
-                    child: Stack(
+                    child: Column(
                       children: [
-                        Column(
-                          children: [
-                            Expanded(
-                              child: Stack(
-                                children: [
-                                  Image.network(
-                                    imageUrl,
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
+                        Expanded(
+                          child: Stack(
+                            children: [
+                              AspectRatio(
+                                aspectRatio: 1,
+                                child: Image.network(
+                                  imageUrl,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  errorBuilder:
+                                      (context, error, stackTrace) =>
+                                          const Center(
+                                            child: Icon(
+                                              Icons.broken_image,
+                                              color: Colors.grey,
+                                              size: 40,
+                                            ),
+                                          ),
+                                ),
+                              ),
+                              if (isSelected)
+                                Positioned.fill(
+                                  child: Container(
+                                    color: const Color(0x553C1AFF),
                                   ),
-                                  if (isSelected)
-                                    Container(color: const Color(0x997A5FFF)),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              captureTime,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
+                                ),
+                            ],
+                          ),
                         ),
-                        if (isEditMode)
-                          Positioned(
-                            top: 4,
-                            right: 4,
-                            child: Icon(
-                              isSelected
-                                  ? Icons.check_circle
-                                  : Icons.radio_button_unchecked,
-                              color:
-                                  isSelected ? Colors.deepPurple : Colors.grey,
+                        const SizedBox(height: 4),
+                        Center(
+                          child: Text(
+                            '${index + 1}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.black,
                             ),
                           ),
+                        ),
                       ],
                     ),
                   );

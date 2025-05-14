@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:frontend1/services/api_service.dart';
 
 class DeviceListPage extends StatefulWidget {
@@ -60,8 +61,31 @@ class _DeviceListPageState extends State<DeviceListPage> {
     }
   }
 
-  void _goToQRPage() {
-    Navigator.pushNamed(context, '/DeviceQRPage');
+  Future<void> _goToQRPage() async {
+    if (_cameras.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('등록된 카메라가 없습니다.')));
+      return;
+    }
+
+    final first = _cameras.first;
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getInt('userId');
+    await prefs.setInt('cameraId', first['cameraId']);
+    await prefs.setInt('deviceId', first['deviceId']);
+    await prefs.setString('deviceIP', first['deviceIp'] ?? '');
+
+    Navigator.pushNamed(
+      context,
+      '/DeviceQRPage',
+      arguments: {
+        'userId': userId,
+        'cameraId': first['cameraId'],
+        'deviceId': first['deviceId'],
+        'deviceIP': first['deviceIp'],
+      },
+    );
   }
 
   Widget _buildCameraCard(Map<String, dynamic> camera, int index) {

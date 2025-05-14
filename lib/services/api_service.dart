@@ -295,7 +295,7 @@ class ApiService {
     required bool enabled,
     required String token,
   }) async {
-    final url = Uri.parse('$baseUrl/api/users/notification');
+    final url = Uri.parse('$baseUrl/api//notifications');
 
     final response = await http.post(
       url,
@@ -533,16 +533,23 @@ class ApiService {
     required String token,
     required int userId,
   }) async {
+    final url = Uri.parse('$baseUrl/api/monitoring/pictures/list/$userId');
+
     final response = await http.get(
-      Uri.parse('$baseUrl/api/monitoring/pictures/list/$userId'),
+      url,
       headers: {'Authorization': 'Bearer $token'},
     );
 
     if (response.statusCode == 200) {
       final data = jsonDecode(utf8.decode(response.bodyBytes));
-      return data['pictures'] ?? [];
+
+      if (data['success'] == true && data['pictures'] != null) {
+        return data['pictures'];
+      } else {
+        throw Exception('API 응답 실패: ${data['message'] ?? '알 수 없음'}');
+      }
     } else {
-      throw Exception('사진 불러오기 실패: ${response.body}');
+      throw Exception('HTTP 오류: ${response.statusCode} - ${response.body}');
     }
   }
 
@@ -590,9 +597,9 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(utf8.decode(response.bodyBytes));
-      return data;
+      return data['picture'] ?? {};
     } else {
-      throw Exception('이미지 상세 정보 불러오기 실패: ${response.body}');
+      throw Exception('사진 상세 조회 실패: ${response.body}');
     }
   }
 

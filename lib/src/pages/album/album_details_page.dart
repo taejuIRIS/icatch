@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../services/api_service.dart';
+import 'package:logger/logger.dart';
+
+final Logger logger = Logger();
 
 class AlbumDetailPage extends StatefulWidget {
   final int imageId;
@@ -60,11 +63,13 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
     }
 
     try {
+      logger.i('[삭제 확인] 이미지 ID ${widget.imageId} 삭제 진행');
       await ApiService.deletePictureById(token: token, imageId: widget.imageId);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('사진이 삭제되었습니다')));
-      Navigator.pop(context, true); // 이전 페이지에 true 반환
+      logger.i('[삭제 완료] 이미지 ID ${widget.imageId} 삭제됨');
+      Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -81,13 +86,13 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
             content: const Text('정말로 삭제하시겠습니까?'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(ctx).pop(), // 닫기
+                onPressed: () => Navigator.of(ctx).pop(),
                 child: const Text('아니요', style: TextStyle(color: Colors.red)),
               ),
               TextButton(
                 onPressed: () {
-                  Navigator.of(ctx).pop(); // 다이얼로그 닫고
-                  _deleteImage(); // 실제 삭제 실행
+                  Navigator.of(ctx).pop();
+                  _deleteImage();
                 },
                 child: const Text('예'),
               ),
@@ -104,45 +109,74 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
 
     final imageUrl = 'http://ceprj.gachon.ac.kr:60004${picture!['imageUrl']}';
     final captureTime = picture!['formattedCaptureTime'] ?? '';
-    final deviceName = picture!['deviceName'] ?? '알 수 없음';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('사진 상세'), centerTitle: true),
+      appBar: AppBar(
+        title: const Text('사진 상세'),
+        backgroundColor: Colors.white,
+        centerTitle: true,
+      ),
       body: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AspectRatio(
-            aspectRatio: 16 / 9,
-            child: Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-              width: double.infinity,
-            ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              return SizedBox(
+                width: width,
+                height: width,
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder:
+                      (context, error, stackTrace) => const Center(
+                        child: Icon(
+                          Icons.broken_image,
+                          color: Colors.grey,
+                          size: 60,
+                        ),
+                      ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.info_outline, color: Colors.grey),
-              const SizedBox(width: 8),
-              Text(
-                captureTime,
-                style: const TextStyle(color: Colors.grey, fontSize: 14),
-              ),
-            ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.info_outline,
+                      color: Colors.black,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 14),
+                    Text(
+                      captureTime.isNotEmpty ? captureTime : '날짜 정보 없음',
+                      style: const TextStyle(color: Colors.black, fontSize: 16),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                GestureDetector(
+                  onTap: () {
+                    logger.i('[삭제 버튼 클릭됨] 이미지 ID: ${widget.imageId}');
+                    _confirmDeleteDialog(context);
+                  },
+                  child: Row(
+                    children: const [
+                      Icon(Icons.delete_outline, color: Colors.black, size: 24),
+                      SizedBox(width: 10),
+                      Text('삭제', style: TextStyle(fontSize: 16)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            '📷 기기명: $deviceName',
-            style: const TextStyle(color: Colors.grey, fontSize: 13),
-          ),
-          const SizedBox(height: 24),
-          // 삭제 아이콘과 텍스트만 남겨둠
-          IconButton(
-            onPressed: () => _confirmDeleteDialog(context),
-            icon: const Icon(Icons.delete_outline, size: 28),
-          ),
-          const Text('삭제'),
         ],
       ),
     );

@@ -20,7 +20,7 @@ import 'src/pages/targets/targets_add_page.dart';
 import 'src/pages/personal_page.dart';
 import 'src/pages/album/album_list_page.dart';
 import 'src/pages/album/album_details_page.dart';
-import 'src/pages/calendar_page.dart';
+import 'src/pages/notification_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -166,6 +166,8 @@ class MyApp extends StatelessWidget {
               builder: (_) => TargetsAddPage(),
               settings: RouteSettings(arguments: args), // 전달 그대로 유지
             );
+          case '/NotificationPage':
+            return MaterialPageRoute(builder: (_) => const NotificationPage());
 
           case '/PersonalPage':
             return MaterialPageRoute(builder: (_) => const PersonalPage());
@@ -178,9 +180,6 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(
               builder: (_) => AlbumDetailPage(imageId: args['imageId']),
             );
-
-          case '/CalendarPage':
-            return MaterialPageRoute(builder: (_) => const CalendarPage());
 
           default:
             return MaterialPageRoute(

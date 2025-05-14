@@ -8,7 +8,6 @@ import '../components/live_time_widget.dart';
 import '../components/camera_monitor_view.dart';
 import '../../services/api_service.dart';
 import '../navbar/bottom_navbar.dart';
-import 'calendar_page.dart';
 import 'add_page.dart';
 import 'notification_page.dart';
 import 'personal_page.dart';
@@ -71,6 +70,11 @@ class _HomePageState extends State<HomePage> {
           logger.i(
             '📡 초기 선택된 카메라: IP=${first['deviceIp']}, ID=${first['cameraId']}, Device=${first['deviceId']}',
           );
+
+          // ✅ 저장
+          prefs.setInt('cameraId', selectedCameraId!);
+          prefs.setInt('deviceId', selectedDeviceId!);
+          prefs.setString('deviceIP', selectedDeviceIP!);
         }
       });
     } else {
@@ -143,7 +147,7 @@ class _HomePageState extends State<HomePage> {
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF7A5FFF),
+                        color: Color(0xFF6A4DFF),
                       ),
                     ),
                   ],
@@ -176,17 +180,22 @@ class _HomePageState extends State<HomePage> {
         CameraListTab(
           cameraList: _cameraList,
           selectedCameraId: selectedCameraId,
-          onCameraSelected: (camera) {
+          onCameraSelected: (camera) async {
+            final prefs = await SharedPreferences.getInstance();
             setState(() {
               selectedCameraId = camera['cameraId'];
               selectedDeviceId = camera['deviceId'];
               selectedDeviceIP = camera['deviceIp'];
               isCameraConnected = true;
-
-              logger.i(
-                '📷 선택된 카메라 변경됨 => cameraId: $selectedCameraId, deviceId: $selectedDeviceId, IP: $selectedDeviceIP',
-              );
             });
+
+            logger.i(
+              '📷 선택된 카메라 변경됨 => cameraId: $selectedCameraId, deviceId: $selectedDeviceId, IP: $selectedDeviceIP',
+            );
+
+            prefs.setInt('cameraId', selectedCameraId!);
+            prefs.setInt('deviceId', selectedDeviceId!);
+            prefs.setString('deviceIP', selectedDeviceIP!);
           },
           onAddPressed: _registerDevice,
         ),
@@ -216,15 +225,12 @@ class _HomePageState extends State<HomePage> {
               nextPage = const HomePage();
               break;
             case 1:
-              nextPage = const CalendarPage();
-              break;
-            case 2:
               nextPage = const AddPage();
               break;
-            case 3:
+            case 2:
               nextPage = const NotificationPage();
               break;
-            case 4:
+            case 3:
               nextPage = const PersonalPage();
               break;
             default:

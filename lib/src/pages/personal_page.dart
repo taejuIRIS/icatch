@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../navbar/bottom_navbar.dart';
 import 'home_page.dart';
-import 'calendar_page.dart';
 import 'add_page.dart';
 import 'notification_page.dart';
 import 'package:frontend1/src/pages/targets/targets_list.dart';
@@ -19,7 +18,7 @@ class PersonalPage extends StatefulWidget {
 }
 
 class _PersonalPageState extends State<PersonalPage> {
-  final int _selectedIndex = 4;
+  final int _selectedIndex = 3;
   String usernickname = '';
   String email = '';
   bool notificationEnabled = true; // ✅ 기본값 true
@@ -117,16 +116,10 @@ class _PersonalPageState extends State<PersonalPage> {
       case 1:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const CalendarPage()),
-        );
-        break;
-      case 2:
-        Navigator.pushReplacement(
-          context,
           MaterialPageRoute(builder: (_) => const AddPage()),
         );
         break;
-      case 3:
+      case 2:
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const NotificationPage()),
@@ -161,7 +154,7 @@ class _PersonalPageState extends State<PersonalPage> {
                           text: "i",
                           style: TextStyle(
                             color: Colors.black,
-                            fontSize: 20,
+                            fontSize: 24,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -169,7 +162,7 @@ class _PersonalPageState extends State<PersonalPage> {
                           text: "Catch",
                           style: TextStyle(
                             color: Color(0xFF6A4DFF),
-                            fontSize: 20,
+                            fontSize: 24,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
