@@ -183,12 +183,12 @@ class _NotificationPageState extends State<NotificationPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
               const Text(
                 '알림',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 8),
               Expanded(
                 child:
                     notifications.isEmpty
@@ -198,9 +198,14 @@ class _NotificationPageState extends State<NotificationPage> {
                           itemCount: notifications.length,
                           itemBuilder: (context, index) {
                             final n = notifications[index];
+                            final type = n['notificationType'] ?? 'INFO';
+                            final description =
+                                type == 'ALERT'
+                                    ? '긴급 알림, 즉시 확인하세요!'
+                                    : '일반 정보 알림입니다.';
                             return _notificationTile(
                               title: n['title'] ?? '',
-                              description: '카메라 ID: ${n['cameraId']}',
+                              description: description,
                               time: _formatTime(n['createdAt']),
                             );
                           },
@@ -258,4 +263,3 @@ class _NotificationPageState extends State<NotificationPage> {
     );
   }
 }
-

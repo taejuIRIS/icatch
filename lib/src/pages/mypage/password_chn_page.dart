@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../services/api_service.dart'; // ✅ API 분리된 부분 import
+import '../../../services/api_service.dart';
+import '../../styles/input_styles.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -13,6 +14,9 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  bool _obscureCurrent = true;
+  bool _obscureNew = true;
+  bool _obscureConfirm = true;
 
   Future<void> _changePassword() async {
     final currentPassword = _currentPasswordController.text.trim();
@@ -90,7 +94,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
         title: const Text("비밀번호 수정"),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
         backgroundColor: Colors.white,
@@ -100,13 +104,31 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 32),
-            _buildPasswordField("기존 비밀번호", _currentPasswordController),
-            const SizedBox(height: 16),
-            _buildPasswordField("새로운 비밀번호", _newPasswordController),
-            const SizedBox(height: 16),
-            _buildPasswordField("새로운 비밀번호 확인", _confirmPasswordController),
+            _buildInputField(
+              label: "기존 비밀번호",
+              controller: _currentPasswordController,
+              obscureText: _obscureCurrent,
+              onToggle:
+                  () => setState(() => _obscureCurrent = !_obscureCurrent),
+            ),
+            const SizedBox(height: 20),
+            _buildInputField(
+              label: "새로운 비밀번호",
+              controller: _newPasswordController,
+              obscureText: _obscureNew,
+              onToggle: () => setState(() => _obscureNew = !_obscureNew),
+            ),
+            const SizedBox(height: 20),
+            _buildInputField(
+              label: "새로운 비밀번호 확인",
+              controller: _confirmPasswordController,
+              obscureText: _obscureConfirm,
+              onToggle:
+                  () => setState(() => _obscureConfirm = !_obscureConfirm),
+            ),
             const Spacer(),
             GestureDetector(
               onTap: _changePassword,
@@ -131,7 +153,12 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     );
   }
 
-  Widget _buildPasswordField(String label, TextEditingController controller) {
+  Widget _buildInputField({
+    required String label,
+    required TextEditingController controller,
+    required bool obscureText,
+    required VoidCallback onToggle,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -139,21 +166,27 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           label,
           style: const TextStyle(
             fontSize: 14,
-            color: Color(0xFF344053),
             fontWeight: FontWeight.bold,
+            color: Color(0xFF344053),
           ),
         ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: controller,
-          obscureText: true,
-          decoration: InputDecoration(
-            contentPadding: const EdgeInsets.symmetric(
-              vertical: 18,
-              horizontal: 16,
+        const SizedBox(height: 8),
+        Container(
+          decoration: InputStyles.inputBoxDecoration,
+          child: TextField(
+            controller: controller,
+            obscureText: obscureText,
+            decoration: InputStyles.inputDecoration(
+              hintText: '',
+              suffixIcon: IconButton(
+                icon: Icon(
+                  obscureText ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.grey,
+                ),
+                onPressed: onToggle,
+              ),
             ),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            hintText: "",
+            style: const TextStyle(fontSize: 16),
           ),
         ),
       ],

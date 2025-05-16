@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../services/api_service.dart'; // ✅ api_service 사용
+import '../../../services/api_service.dart';
 import '../../components/wifi_setup_modal.dart';
 import 'device_checkqr.dart';
 
@@ -52,9 +52,7 @@ class _DeviceQRPageState extends State<DeviceQRPage> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isSetup', true);
 
-    final deviceInfo = await ApiService.fetchDeviceInfo(
-      widget.userId,
-    ); // ✅ api_service.dart 사용
+    final deviceInfo = await ApiService.fetchDeviceInfo(widget.userId);
     if (!mounted) return;
 
     if (deviceInfo != null) {
@@ -79,7 +77,41 @@ class _DeviceQRPageState extends State<DeviceQRPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: RichText(
+          text: const TextSpan(
+            children: [
+              TextSpan(
+                text: 'i',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              TextSpan(
+                text: 'Catch',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF6A4DFF),
+                ),
+              ),
+            ],
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: Colors.black,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      extendBodyBehindAppBar: true,
       body: Container(
+        width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFFFDF8FF), Color(0xFFE5F0FF)],
@@ -89,22 +121,25 @@ class _DeviceQRPageState extends State<DeviceQRPage> {
         ),
         child: SafeArea(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 24),
-              Container(
-                width: MediaQuery.of(context).size.width * 0.85,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(100),
-                ),
-                child: FractionallySizedBox(
-                  alignment: Alignment.centerLeft,
-                  widthFactor: 1 / 4,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Color(0xFF6A4DFF),
-                      borderRadius: BorderRadius.circular(100),
+              const SizedBox(height: 16),
+              Center(
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.85,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: 1 / 4,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Color(0xFF6A4DFF),
+                        borderRadius: BorderRadius.circular(100),
+                      ),
                     ),
                   ),
                 ),
@@ -132,13 +167,16 @@ class _DeviceQRPageState extends State<DeviceQRPage> {
                 ),
               ),
               const SizedBox(height: 48),
-              qrData != null
-                  ? QrImageView(
-                    data: qrData!,
-                    version: QrVersions.auto,
-                    size: 240,
-                  )
-                  : const CircularProgressIndicator(),
+              Center(
+                child:
+                    qrData != null
+                        ? QrImageView(
+                          data: qrData!,
+                          version: QrVersions.auto,
+                          size: 240,
+                        )
+                        : const CircularProgressIndicator(),
+              ),
               const Spacer(),
               Padding(
                 padding: const EdgeInsets.symmetric(

@@ -94,7 +94,7 @@ class _DeviceDangerZonePageState extends State<DeviceDangerZonePage> {
         context,
         '/home',
         (route) => false,
-        arguments: {'navigateFrom': 'deviceRegister'},
+        arguments: {'navigateFrom': 'deviceRegister', 'isNewlyAdded': true},
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -154,83 +154,107 @@ class _DeviceDangerZonePageState extends State<DeviceDangerZonePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: RichText(
+          text: const TextSpan(
+            children: [
+              TextSpan(
+                text: 'i',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              TextSpan(
+                text: 'Catch',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF6A4DFF),
+                ),
+              ),
+            ],
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: Colors.black,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
-                  onPressed: () => Navigator.pop(context),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 24),
+              Container(
+                height: 6,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(100),
                 ),
-                const SizedBox(height: 24),
-                Container(
-                  height: 6,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(100),
-                  ),
-                  child: FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: 1.0,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF6A4DFF),
-                        borderRadius: BorderRadius.circular(100),
-                      ),
+                child: FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: 1.0,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6A4DFF),
+                      borderRadius: BorderRadius.circular(100),
                     ),
                   ),
                 ),
-                const SizedBox(height: 40),
-                const Text(
-                  '얼마 안 남았어요!',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF090A0A),
-                  ),
+              ),
+              const SizedBox(height: 40),
+              const Text(
+                '얼마 안 남았어요!',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF090A0A),
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'iCatch는 보호 대상이 위험 구역에 있을 때 사용자 님께\n알림을 보내드려요! 위험 구역을 설정해 볼까요?\n총 9개 구간 중 위험하다고 생각하는 구간을 눌러주세요!',
-                  style: TextStyle(fontSize: 16, color: Color(0xFF090A0A)),
-                ),
-                const SizedBox(height: 16),
-                _buildZoneOverlay(),
-                const SizedBox(height: 40),
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: isLoading ? null : _handleSubmit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6A4DFF),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(32),
-                      ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'iCatch는 보호 대상이 위험 구역에 있을 때 사용자 님께\n알림을 보내드려요! 위험 구역을 설정해 볼까요?\n총 9개 구간 중 위험하다고 생각하는 구간을 눌러주세요!',
+                style: TextStyle(fontSize: 16, color: Color(0xFF090A0A)),
+              ),
+              const SizedBox(height: 16),
+              _buildZoneOverlay(),
+              const SizedBox(height: 40),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: isLoading ? null : _handleSubmit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6A4DFF),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(32),
                     ),
-                    child:
-                        isLoading
-                            ? const CircularProgressIndicator(
+                  ),
+                  child:
+                      isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                            'Done',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
                               color: Colors.white,
-                            )
-                            : const Text(
-                              'Done',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: Colors.white,
-                              ),
                             ),
-                  ),
+                          ),
                 ),
-                const SizedBox(height: 40),
-              ],
-            ),
+              ),
+              const SizedBox(height: 40),
+            ],
           ),
         ),
       ),

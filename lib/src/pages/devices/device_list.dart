@@ -24,7 +24,12 @@ class _DeviceListPageState extends State<DeviceListPage> {
   Future<void> _fetchCameras() async {
     final cameras = await ApiService.fetchUserCameras2();
     setState(() {
-      _cameras = cameras;
+      _cameras =
+          cameras
+              .where(
+                (c) => (c['cameraName'] ?? '').toString().trim().isNotEmpty,
+              )
+              .toList();
       _isLoading = false;
     });
   }
@@ -141,7 +146,7 @@ class _DeviceListPageState extends State<DeviceListPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        camera['cameraName'] ?? '카메라',
+                        camera['cameraName'],
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -186,62 +191,73 @@ class _DeviceListPageState extends State<DeviceListPage> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('카메라'),
-        backgroundColor: Colors.white,
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: Colors.black,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body:
           _isLoading
               ? const Center(child: CircularProgressIndicator())
-              : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 22,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          "등록된 카메라 📸",
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
+              : SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 22,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "등록된 카메라 📸",
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        if (_cameras.isNotEmpty)
-                          GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _selectionMode = !_selectionMode;
-                                _selectedCameraIds.clear();
-                              });
-                            },
-                            child: Text(
-                              _selectionMode ? '취소' : '편집',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
+                          if (_cameras.isNotEmpty)
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectionMode = !_selectionMode;
+                                  _selectedCameraIds.clear();
+                                });
+                              },
+                              child: Text(
+                                _selectionMode ? '취소' : '편집',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
                               ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child:
-                        _cameras.isEmpty
-                            ? const Center(child: Text('등록된 카메라가 없습니다.'))
-                            : ListView.builder(
-                              itemCount: _cameras.length,
-                              itemBuilder:
-                                  (context, index) =>
-                                      _buildCameraCard(_cameras[index], index),
-                            ),
-                  ),
-                ],
+                    if (_cameras.isEmpty)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.only(top: 24),
+                          child: Text('등록된 카메라가 없습니다.'),
+                        ),
+                      ),
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _cameras.length,
+                      itemBuilder:
+                          (context, index) =>
+                              _buildCameraCard(_cameras[index], index),
+                    ),
+                  ],
+                ),
               ),
       bottomSheet: SafeArea(
         child: Padding(

@@ -9,6 +9,7 @@ import 'package:frontend1/src/pages/devices/device_list.dart';
 import 'package:frontend1/src/pages/mypage/users_setting_page.dart';
 import 'package:frontend1/src/pages/album/album_list_page.dart';
 import '../../services/api_service.dart';
+import 'package:frontend1/src/routes/route_observer.dart';
 
 class PersonalPage extends StatefulWidget {
   const PersonalPage({super.key});
@@ -17,11 +18,11 @@ class PersonalPage extends StatefulWidget {
   State<PersonalPage> createState() => _PersonalPageState();
 }
 
-class _PersonalPageState extends State<PersonalPage> {
+class _PersonalPageState extends State<PersonalPage> with RouteAware {
   final int _selectedIndex = 3;
   String usernickname = '';
   String email = '';
-  bool notificationEnabled = true; // ✅ 기본값 true
+  bool notificationEnabled = true;
 
   int cameraCount = 0;
   int targetCount = 0;
@@ -30,14 +31,34 @@ class _PersonalPageState extends State<PersonalPage> {
   @override
   void initState() {
     super.initState();
-    _loadToggleSetting(); // ✅ 알림 설정 불러오기
+    _loadAllData();
+  }
+
+  void _loadAllData() {
+    _loadToggleSetting();
     _fetchProfile();
     _fetchCameraCount();
     _fetchTargetCount();
     _fetchGestureCount();
   }
 
-  // ✅ SharedPreferences에서 토글 상태 불러오기
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    _loadAllData();
+  }
+
   Future<void> _loadToggleSetting() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getBool('pushToggle');
@@ -46,7 +67,6 @@ class _PersonalPageState extends State<PersonalPage> {
     });
   }
 
-  // ✅ SharedPreferences에만 저장 (API 호출 제거)
   Future<void> _toggleNotification(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('pushToggle', enabled);
@@ -75,11 +95,7 @@ class _PersonalPageState extends State<PersonalPage> {
   }
 
   Future<void> _fetchCameraCount() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('authToken');
-    if (token == null) return;
-
-    final count = await ApiService.fetchCameraCount(token);
+    final count = await ApiService.fetchCameraCountByName();
     setState(() {
       cameraCount = count;
     });
@@ -169,13 +185,12 @@ class _PersonalPageState extends State<PersonalPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 24),
                 ],
               ),
             ),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 40),
+              padding: const EdgeInsets.symmetric(vertical: 38),
               color: const Color(0xFF6A4DFF),
               child: Column(
                 children: [
@@ -183,7 +198,7 @@ class _PersonalPageState extends State<PersonalPage> {
                     radius: 40,
                     backgroundImage: AssetImage("assets/images/baby-cat.png"),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 6),
                   Text(
                     usernickname,
                     style: const TextStyle(
@@ -200,7 +215,7 @@ class _PersonalPageState extends State<PersonalPage> {
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 22),
+              padding: const EdgeInsets.symmetric(vertical: 25, horizontal: 22),
               color: const Color(0xFFC6C4FF),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -212,60 +227,56 @@ class _PersonalPageState extends State<PersonalPage> {
               ),
             ),
             Expanded(
-              child: ListView(
+              child: Column(
                 children: [
                   _buildMenuItem(Icons.notifications, "알림", true),
                   _buildMenuItem(
                     Icons.camera_alt,
                     "카메라",
                     false,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const DeviceListPage(),
+                    onTap:
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const DeviceListPage(),
+                          ),
                         ),
-                      );
-                    },
                   ),
                   _buildMenuItem(
                     Icons.pets,
                     "주거인",
                     false,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const TargetListPage(),
+                    onTap:
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const TargetListPage(),
+                          ),
                         ),
-                      );
-                    },
                   ),
                   _buildMenuItem(
                     Icons.photo_album,
                     "앨범",
                     false,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const AlbumListPage(),
+                    onTap:
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AlbumListPage(),
+                          ),
                         ),
-                      );
-                    },
                   ),
                   _buildMenuItem(
                     Icons.settings,
                     "설정",
                     false,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const UserSettingsPage(),
+                    onTap:
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const UserSettingsPage(),
+                          ),
                         ),
-                      );
-                    },
                   ),
                 ],
               ),
@@ -278,17 +289,27 @@ class _PersonalPageState extends State<PersonalPage> {
 
   Widget _buildInfoCard(IconData icon, String label) {
     return Container(
-      width: 100,
-      padding: const EdgeInsets.all(16),
+      width: 110,
+      height: 110,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: const Color(0xFF673AB7), size: 32),
+          Icon(icon, color: const Color(0xFF6A4DFF), size: 40),
           const SizedBox(height: 8),
-          Text(label, style: const TextStyle(color: Color(0xFF673AB7))),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF6A4DFF),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -308,7 +329,7 @@ class _PersonalPageState extends State<PersonalPage> {
               ? Switch(
                 value: notificationEnabled,
                 onChanged: (val) => _toggleNotification(val),
-                activeColor: const Color(0xFF673AB7),
+                activeColor: const Color(0xFF6A4DFF),
               )
               : const Icon(Icons.chevron_right),
       onTap: isToggle ? null : onTap,

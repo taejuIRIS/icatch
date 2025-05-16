@@ -15,69 +15,85 @@ class AlbumDetailPage extends StatefulWidget {
 }
 
 class _AlbumDetailPageState extends State<AlbumDetailPage> {
-  Map<String, dynamic>? picture;
+  List<dynamic> pictures = [];
+  int currentIndex = 0;
   bool isLoading = true;
+  PageController? _pageController;
 
   @override
   void initState() {
     super.initState();
-    _loadPictureDetail();
+    _loadPictures();
   }
 
-  Future<void> _loadPictureDetail() async {
+  // Future<void> _loadPictures() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final token = prefs.getString('authToken');
+  //   final userId = prefs.getInt('userId');
+
+  //   if (token == null || userId == null) return;
+
+  //   try {
+  //     final fetched = await ApiService.fetchUserPictures(
+  //       token: token,
+  //       userId: userId,
+  //     );
+
+  //     final idx = fetched.indexWhere((p) => p['imageId'] == widget.imageId);
+  //     setState(() {
+  //       pictures = fetched;
+  //       currentIndex = idx != -1 ? idx : 0;
+  //       _pageController = PageController(initialPage: currentIndex);
+  //       isLoading = false;
+  //     });
+  //   } catch (e) {
+  //     logger.e('사진 목록 로딩 실패: $e');
+  //     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+  //   }
+  // }
+  Future<void> _loadPictures() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('authToken');
+    final userId = prefs.getInt('userId');
 
-    if (token == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('토큰이 존재하지 않습니다')));
-      return;
-    }
+    if (token == null || userId == null) return;
 
     try {
-      final detail = await ApiService.fetchPictureDetail(
+      final fetched = await ApiService.fetchUserPictures(
         token: token,
-        imageId: widget.imageId,
+        userId: userId,
       );
+
+      // ✅ imagePath 기준 중복 제거 - 첫 항목만 남김
+      final seenPaths = <String>{};
+      final deduplicated = <Map<String, dynamic>>[];
+
+      for (var pic in fetched) {
+        final path = pic['imagePath'];
+        if (!seenPaths.contains(path)) {
+          seenPaths.add(path);
+          deduplicated.add(pic);
+        }
+      }
+
+      // ✅ 전달받은 imageId의 위치 찾기 (중복 제거된 리스트 기준)
+      final idx = deduplicated.indexWhere(
+        (p) => p['imageId'] == widget.imageId,
+      );
+
       setState(() {
-        picture = detail;
+        pictures = deduplicated;
+        currentIndex = idx != -1 ? idx : 0;
+        _pageController = PageController(initialPage: currentIndex);
         isLoading = false;
       });
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('상세 정보 불러오기 실패: $e')));
+      logger.e('사진 목록 로딩 실패: $e');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
   }
 
-  Future<void> _deleteImage() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('authToken');
-
-    if (token == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('토큰이 존재하지 않습니다')));
-      return;
-    }
-
-    try {
-      logger.i('[삭제 확인] 이미지 ID ${widget.imageId} 삭제 진행');
-      await ApiService.deletePictureById(token: token, imageId: widget.imageId);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('사진이 삭제되었습니다')));
-      logger.i('[삭제 완료] 이미지 ID ${widget.imageId} 삭제됨');
-      Navigator.pop(context, true);
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('삭제 실패: $e')));
-    }
-  }
-
-  void _confirmDeleteDialog(BuildContext context) {
+  void _confirmDeleteDialog(int imageId) {
     showDialog(
       context: context,
       builder:
@@ -92,7 +108,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
               TextButton(
                 onPressed: () {
                   Navigator.of(ctx).pop();
-                  _deleteImage();
+                  _deleteImage(imageId);
                 },
                 child: const Text('예'),
               ),
@@ -101,14 +117,38 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
     );
   }
 
+  Future<void> _deleteImage(int imageId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('authToken');
+    if (token == null) return;
+
+    try {
+      await ApiService.deletePictureById(token: token, imageId: imageId);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('사진이 삭제되었습니다')));
+
+      setState(() {
+        pictures.removeWhere((p) => p['imageId'] == imageId);
+        if (pictures.isEmpty) {
+          Navigator.pop(context);
+        } else {
+          currentIndex = currentIndex.clamp(0, pictures.length - 1);
+          _pageController?.jumpToPage(currentIndex);
+        }
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('삭제 실패: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (isLoading || picture == null) {
+    if (isLoading || _pageController == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-
-    final imageUrl = 'http://ceprj.gachon.ac.kr:60004${picture!['imageUrl']}';
-    final captureTime = picture!['formattedCaptureTime'] ?? '';
 
     return Scaffold(
       appBar: AppBar(
@@ -116,68 +156,110 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         backgroundColor: Colors.white,
         centerTitle: true,
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final width = constraints.maxWidth;
-              return SizedBox(
-                width: width,
-                height: width,
-                child: Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder:
-                      (context, error, stackTrace) => const Center(
-                        child: Icon(
-                          Icons.broken_image,
-                          color: Colors.grey,
-                          size: 60,
+      body: PageView.builder(
+        controller: _pageController,
+        itemCount: pictures.length,
+        onPageChanged: (index) => setState(() => currentIndex = index),
+        itemBuilder: (context, index) {
+          final picture = pictures[index];
+          final imageUrl =
+              'http://ceprj.gachon.ac.kr:60004${picture['imageUrl']}';
+          final captureTime = picture['formattedCaptureTime'] ?? '';
+          final deviceId = picture['deviceId']?.toString() ?? '정보 없음';
+
+          return Stack(
+            children: [
+              Column(
+                children: [
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.width, // ✅ 1:1 비율
+                    child: Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder:
+                          (_, __, ___) => const Center(
+                            child: Icon(Icons.broken_image, size: 60),
+                          ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.info_outline, size: 22),
+                            const SizedBox(width: 14),
+                            Text(
+                              captureTime.isNotEmpty ? captureTime : '날짜 정보 없음',
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ],
                         ),
-                      ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.info_outline,
-                      color: Colors.black,
-                      size: 22,
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            const Icon(Icons.videocam_outlined, size: 22),
+                            const SizedBox(width: 14),
+                            Text(
+                              '디바이스 ID: $deviceId',
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        GestureDetector(
+                          onTap: () => _confirmDeleteDialog(picture['imageId']),
+                          child: Row(
+                            children: const [
+                              Icon(Icons.delete_outline, size: 24),
+                              SizedBox(width: 10),
+                              Text('삭제', style: TextStyle(fontSize: 16)),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 14),
-                    Text(
-                      captureTime.isNotEmpty ? captureTime : '날짜 정보 없음',
-                      style: const TextStyle(color: Colors.black, fontSize: 16),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                GestureDetector(
-                  onTap: () {
-                    logger.i('[삭제 버튼 클릭됨] 이미지 ID: ${widget.imageId}');
-                    _confirmDeleteDialog(context);
-                  },
-                  child: Row(
-                    children: const [
-                      Icon(Icons.delete_outline, color: Colors.black, size: 24),
-                      SizedBox(width: 10),
-                      Text('삭제', style: TextStyle(fontSize: 16)),
-                    ],
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+              if (index > 0)
+                Positioned(
+                  left: 1,
+                  top:
+                      MediaQuery.of(context).size.width / 2 -
+                      24, // 48 아이콘 사이즈 기준 중앙 정렬
+                  child: IconButton(
+                    icon: const Icon(Icons.chevron_left, size: 48),
+                    onPressed:
+                        () => _pageController?.previousPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        ),
                   ),
                 ),
-              ],
-            ),
-          ),
-        ],
+              if (index < pictures.length - 1)
+                Positioned(
+                  right: 1,
+                  top:
+                      MediaQuery.of(context).size.width / 2 -
+                      24, // 48 아이콘 사이즈 기준 중앙 정렬
+                  child: IconButton(
+                    icon: const Icon(Icons.chevron_right, size: 48),
+                    onPressed:
+                        () => _pageController?.nextPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }

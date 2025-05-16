@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../services/api_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:logger/logger.dart';
 
 final Logger logger = Logger();
 
 class JoystickControl extends StatelessWidget {
-  final int cameraId;
-  const JoystickControl({super.key, required this.cameraId});
+  final String deviceIP;
+
+  const JoystickControl({super.key, required this.deviceIP});
 
   Future<void> _handleDirection(String direction) async {
     final prefs = await SharedPreferences.getInstance();
@@ -18,11 +20,23 @@ class JoystickControl extends StatelessWidget {
       return;
     }
 
-    await ApiService.controlCameraDirection(
-      cameraId: cameraId,
-      direction: direction,
-      token: token,
-    );
+    final url = Uri.parse('$deviceIP/servo');
+    // final url = Uri.parse('https://9c7b-210-119-237-42.ngrok-free.app/servo');
+    final headers = {'Content-Type': 'application/json'};
+    final body = jsonEncode({'direction': direction});
+
+    try {
+      final response = await http.post(url, headers: headers, body: body);
+      if (response.statusCode == 200) {
+        logger.i('✅ [$direction] 성공: ${response.body}');
+      } else {
+        logger.w(
+          '⚠️ [$direction] 실패: ${response.statusCode} - ${response.body}',
+        );
+      }
+    } catch (e) {
+      logger.e('❌ 요청 실패: $e');
+    }
   }
 
   @override
@@ -55,35 +69,22 @@ class JoystickControl extends StatelessWidget {
               ),
             ),
 
-            // 상단 화살표
-            Positioned(
-              top: 24,
-              child: IconButton(
-                icon: const Icon(
-                  Icons.arrow_drop_up,
-                  size: 40,
+            // 중앙 버튼 (center)
+            GestureDetector(
+              onTap: () => _handleDirection("center"),
+              child: Container(
+                width: 96,
+                height: 96,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
                   color: Color(0xFF6A4DFF),
                 ),
-                onPressed: () => _handleDirection("up"),
-              ),
-            ),
-
-            // 하단 화살표
-            Positioned(
-              bottom: 24,
-              child: IconButton(
-                icon: const Icon(
-                  Icons.arrow_drop_down,
-                  size: 40,
-                  color: Color(0xFF6A4DFF),
-                ),
-                onPressed: () => _handleDirection("down"),
               ),
             ),
 
             // 좌측 화살표
             Positioned(
-              left: 24,
+              left: 10,
               child: IconButton(
                 icon: const Icon(
                   Icons.arrow_left,
@@ -96,7 +97,7 @@ class JoystickControl extends StatelessWidget {
 
             // 우측 화살표
             Positioned(
-              right: 24,
+              right: 10,
               child: IconButton(
                 icon: const Icon(
                   Icons.arrow_right,
@@ -104,16 +105,6 @@ class JoystickControl extends StatelessWidget {
                   color: Color(0xFF6A4DFF),
                 ),
                 onPressed: () => _handleDirection("right"),
-              ),
-            ),
-
-            // 중앙 버튼
-            Container(
-              width: 96,
-              height: 96,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFF6A4DFF),
               ),
             ),
           ],

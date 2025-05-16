@@ -105,27 +105,42 @@ class _SettingsQRPageState extends State<SettingsQRPage> {
         ),
         child: SafeArea(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 24),
-              Container(
-                width: MediaQuery.of(context).size.width * 0.85,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(100),
+              // 🔙 뒤로 가기 버튼
+              Padding(
+                padding: const EdgeInsets.only(left: 12, top: 12),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+                  onPressed: () => Navigator.pop(context),
                 ),
-                child: FractionallySizedBox(
-                  alignment: Alignment.centerLeft,
-                  widthFactor: 1 / 6,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Color(0xFF6A4DFF),
-                      borderRadius: BorderRadius.circular(100),
+              ),
+              const SizedBox(height: 12),
+
+              // 🔵 진행 바
+              Center(
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.85,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: 1 / 6,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Color(0xFF6A4DFF),
+                        borderRadius: BorderRadius.circular(100),
+                      ),
                     ),
                   ),
                 ),
               ),
               const SizedBox(height: 48),
+
+              // 👋 환영 메시지
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
@@ -148,14 +163,22 @@ class _SettingsQRPageState extends State<SettingsQRPage> {
                 ),
               ),
               const SizedBox(height: 48),
-              qrData != null
-                  ? QrImageView(
-                    data: qrData!,
-                    version: QrVersions.auto,
-                    size: 240,
-                  )
-                  : const CircularProgressIndicator(),
+
+              // 📷 QR 코드
+              Center(
+                child:
+                    qrData != null
+                        ? QrImageView(
+                          data: qrData!,
+                          version: QrVersions.auto,
+                          size: 240,
+                        )
+                        : const CircularProgressIndicator(),
+              ),
+
               const Spacer(),
+
+              // ✅ 계속 버튼
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,

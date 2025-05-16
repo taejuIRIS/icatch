@@ -106,9 +106,14 @@ class _TargetListPageState extends State<TargetListPage> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('주거인'),
-        backgroundColor: Colors.white,
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: Colors.black,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body:
           _isLoading
@@ -139,7 +144,7 @@ class _TargetListPageState extends State<TargetListPage> {
                               });
                             },
                             child: Text(
-                              _selectionMode ? '전체 선택' : '편집',
+                              _selectionMode ? '취소' : '편집',
                               style: const TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey,
@@ -192,6 +197,18 @@ class _TargetListPageState extends State<TargetListPage> {
                                           borderRadius: BorderRadius.circular(
                                             12,
                                           ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.grey.withOpacity(
+                                                0.1,
+                                              ), // 밝은 그림자 색상
+                                              blurRadius: 6, // 퍼짐 정도
+                                              offset: Offset(
+                                                0,
+                                                2,
+                                              ), // y축 살짝 아래로 그림자
+                                            ),
+                                          ],
                                         ),
                                         child: Row(
                                           children: [

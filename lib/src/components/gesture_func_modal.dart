@@ -19,13 +19,13 @@ class GestureFuncModal extends StatefulWidget {
 
 class _GestureFuncModalState extends State<GestureFuncModal> {
   final Map<String, String> functionEnumMap = {
-    '블랙 스크린 ON/OFF': 'BLACK_SCREEN',
-    '신고 기능': 'SIGNAL',
-    '사진 찍기': 'TIME_CAPTURE',
-    '“인사하기👋” 알림 보내기': 'ALARM',
-    '“괜찮아~” 알림 보내기': 'FINE_TEXT',
-    '“도와줘!” 알림 보내기': 'EMERGENCY_TEXT',
-    '“불편해 ㅠㅠ” 알림 보내기': 'HELP_TEXT',
+    '블랙 스크린 ON/OFF': 'black_screen',
+    '신고 기능': 'declaration',
+    '사진 찍기': 'picture',
+    '“인사하기👋” 알림 보내기': 'hello',
+    '“괜찮아~” 알림 보내기': 'ok',
+    '“도와줘!” 알림 보내기': 'help',
+    '“불편해 ㅠㅠ” 알림 보내기': 'inconvenient',
   };
 
   late String? currentSelection;

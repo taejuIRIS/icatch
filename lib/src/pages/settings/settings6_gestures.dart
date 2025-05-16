@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../../../services/api_service.dart';
 import '../../components/gesture_func_modal.dart';
+import 'package:logger/logger.dart';
+
+final Logger logger = Logger();
 
 class SettingsGesturePage extends StatefulWidget {
   final int cameraId;
@@ -113,6 +118,29 @@ class _SettingsGesturePageState extends State<SettingsGesturePage> {
       await prefs.setInt('cameraId_$userId', widget.cameraId);
       await prefs.setInt('deviceId_$userId', widget.deviceId);
       await prefs.setString('deviceIP_$userId', widget.deviceIP);
+
+      // ✅ 디바이스로 제스처 POST 전송
+      final gestureId =
+          gesture['image']!.split('/').last.split('.').first; // ex: Gesture_0
+      final actionId = selectedFunction!;
+      final deviceUrl = '${widget.deviceIP}/register_gesture';
+
+      try {
+        final deviceRes = await http.post(
+          Uri.parse(deviceUrl),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'gesture_id': gestureId, 'action_id': actionId}),
+        );
+
+        if (deviceRes.statusCode == 200) {
+          logger.i('디바이스 전송 성공');
+        } else {
+          logger.i('디바이스 응답 실패: ${deviceRes.statusCode}');
+          logger.i(deviceRes.body);
+        }
+      } catch (e) {
+        logger.i('디바이스 통신 오류: $e');
+      }
 
       Navigator.pushNamedAndRemoveUntil(
         context,

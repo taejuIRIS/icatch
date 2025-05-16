@@ -1,4 +1,3 @@
-// add_page.dart
 import 'package:flutter/material.dart';
 import '../navbar/bottom_navbar.dart';
 import '../../services/api_service.dart';
@@ -6,17 +5,20 @@ import '../../utils/shared_pref_helper.dart';
 import 'package:logger/logger.dart';
 
 final Logger logger = Logger();
-String getFunctionDescription(String code) {
-  const map = {
-    'BLACK_SCREEN': '블랙 스크린 ON/OFF',
-    'SIGNAL': '신고 기능',
-    'TIME_CAPTURE': '사진 찍기',
-    'ALARM': '“인사하기👋” 알림 보내기',
-    'FINE_TEXT': '“괜찮아~” 알림 보내기',
-    'EMERGENCY_TEXT': '“도와줘!” 알림 보내기',
-    'HELP_TEXT': '“불편해 ㅠㅠ” 알림 보내기',
+
+String getFunctionDescription(String? code) {
+  const functionNameMap = {
+    'black_screen': '블랙 스크린 ON/OFF',
+    'declaration': '신고 기능',
+    'picture': '사진 찍기',
+    'hello': '“인사하기👋” 알림 보내기',
+    'ok': '“괜찮아~” 알림 보내기',
+    'help': '“도와줘!” 알림 보내기',
+    'inconvenient': '“불편해 ㅠㅠ” 알림 보내기',
   };
-  return map[code.trim()] ?? '기능 없음'; // trim()으로 공백 방지
+
+  if (code == null) return '기능 없음';
+  return functionNameMap[code.toLowerCase()] ?? '기능 없음';
 }
 
 class AddPage extends StatefulWidget {
@@ -170,7 +172,7 @@ class _AddPageState extends State<AddPage> {
                         const Text(
                           '등록된 제스처 👋',
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: 24,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -178,12 +180,16 @@ class _AddPageState extends State<AddPage> {
                           GestureDetector(
                             onTap: () {
                               setState(() {
-                                _selectionMode = !_selectionMode;
-                                _selectedGestureIds.clear();
+                                if (_selectionMode) {
+                                  _selectionMode = false;
+                                  _selectedGestureIds.clear();
+                                } else {
+                                  _selectionMode = true;
+                                }
                               });
                             },
                             child: Text(
-                              _selectionMode ? '전체 선택' : '편집',
+                              _selectionMode ? '취소' : '편집',
                               style: const TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey,
@@ -267,6 +273,14 @@ class _AddPageState extends State<AddPage> {
                                               color: Colors.white,
                                               borderRadius:
                                                   BorderRadius.circular(12),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.grey
+                                                      .withOpacity(0.1),
+                                                  blurRadius: 4,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
                                             ),
                                             child: Row(
                                               children: [

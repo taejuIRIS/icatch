@@ -23,21 +23,14 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final int _selectedIndex = 0;
-  bool isCameraConnected = false;
   List<Map<String, dynamic>> _cameraList = [];
-  int? selectedCameraId;
-  int? selectedDeviceId;
-  String? selectedDeviceIP;
+  Map<String, dynamic>? _selectedCamera;
+
+  bool _isNewlyAdded = false;
 
   @override
   void initState() {
     super.initState();
-    _loadCameraList();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
     _loadCameraList();
   }
 
@@ -50,40 +43,36 @@ class _HomePageState extends State<HomePage> {
     if (result['success']) {
       final cameras = List<Map<String, dynamic>>.from(result['data']);
       final validCameras =
-          cameras.where((camera) {
-            final name = camera['cameraName'];
-            final ip = camera['deviceIp'];
-            return name != null &&
-                ip != null &&
-                ip.toString().trim().isNotEmpty;
-          }).toList();
+          cameras
+              .where(
+                (camera) =>
+                    camera['cameraName'] != null &&
+                    camera['deviceIp'] != null &&
+                    camera['deviceIp'].toString().trim().isNotEmpty,
+              )
+              .toList();
 
       setState(() {
         _cameraList = validCameras;
-        if (validCameras.isNotEmpty && selectedCameraId == null) {
-          final first = validCameras.first;
-          selectedCameraId = first['cameraId'];
-          selectedDeviceId = first['deviceId'];
-          selectedDeviceIP = first['deviceIp'];
-          isCameraConnected = true;
-
-          logger.i(
-            '📡 초기 선택된 카메라: IP=${first['deviceIp']}, ID=${first['cameraId']}, Device=${first['deviceId']}',
-          );
-
-          // ✅ 저장
-          prefs.setInt('cameraId', selectedCameraId!);
-          prefs.setInt('deviceId', selectedDeviceId!);
-          prefs.setString('deviceIP', selectedDeviceIP!);
+        if (_selectedCamera == null && validCameras.isNotEmpty) {
+          _selectedCamera = validCameras.first;
+          _storeCameraInfo(_selectedCamera!);
         }
       });
     } else {
       logger.e('카메라 목록 불러오기 실패: ${result['message']}');
       setState(() {
         _cameraList = [];
-        isCameraConnected = false;
+        _selectedCamera = null;
       });
     }
+  }
+
+  void _storeCameraInfo(Map<String, dynamic> camera) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('cameraId', camera['cameraId']);
+    await prefs.setInt('deviceId', camera['deviceId']);
+    await prefs.setString('deviceIP', camera['deviceIp']);
   }
 
   void _registerDevice() async {
@@ -157,16 +146,6 @@ class _HomePageState extends State<HomePage> {
               LiveTimeWidget(),
             ],
           ),
-          const Column(
-            children: [
-              Icon(Icons.water_drop, color: Colors.black),
-              SizedBox(height: 4),
-              Text(
-                '24°C/40%',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -177,34 +156,32 @@ class _HomePageState extends State<HomePage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildHeader(),
+        const Divider(color: Color(0xFFE0E0E0), thickness: 1, height: 1),
+        const SizedBox(height: 10),
         CameraListTab(
           cameraList: _cameraList,
-          selectedCameraId: selectedCameraId,
+          selectedCameraId: _selectedCamera?['cameraId'],
           onCameraSelected: (camera) async {
-            final prefs = await SharedPreferences.getInstance();
             setState(() {
-              selectedCameraId = camera['cameraId'];
-              selectedDeviceId = camera['deviceId'];
-              selectedDeviceIP = camera['deviceIp'];
-              isCameraConnected = true;
+              _selectedCamera = camera;
+              _isNewlyAdded = false;
             });
-
             logger.i(
-              '📷 선택된 카메라 변경됨 => cameraId: $selectedCameraId, deviceId: $selectedDeviceId, IP: $selectedDeviceIP',
+              '📷 선택된 카메라 변경됨 => cameraId: ${camera['cameraId']}, deviceId: ${camera['deviceId']}, IP: ${camera['deviceIp']}',
             );
-
-            prefs.setInt('cameraId', selectedCameraId!);
-            prefs.setInt('deviceId', selectedDeviceId!);
-            prefs.setString('deviceIP', selectedDeviceIP!);
+            _storeCameraInfo(camera);
           },
           onAddPressed: _registerDevice,
+          isNewlyAdded: _isNewlyAdded,
         ),
-        const SizedBox(height: 12),
-        if (isCameraConnected && selectedDeviceIP != null)
-          CameraMonitorView(deviceIP: selectedDeviceIP!),
-        const SizedBox(height: 16),
-        if (isCameraConnected && selectedCameraId != null)
-          JoystickControl(cameraId: selectedCameraId!),
+        const SizedBox(height: 10),
+        if (_selectedCamera != null && _selectedCamera!['deviceIp'] != null)
+          CameraMonitorView(deviceIP: _selectedCamera!['deviceIp']),
+        const SizedBox(height: 5),
+        if (_selectedCamera != null &&
+            _selectedCamera!['cameraId'] != null &&
+            _selectedCamera!['deviceIp'] != null)
+          JoystickControl(deviceIP: _selectedCamera!['deviceIp']),
       ],
     );
   }

@@ -224,30 +224,6 @@ class ApiService {
     }
   }
 
-  //조이스틱
-  static Future<void> controlCameraDirection({
-    required int cameraId,
-    required String direction, // "up", "down", "left", "right", "center"
-    required String token,
-  }) async {
-    final url = Uri.parse('$baseUrl/api/cameras/$cameraId/control');
-
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({'direction': direction}),
-    );
-
-    if (response.statusCode == 200) {
-      logger.i('카메라 이동 성공: $direction');
-    } else {
-      logger.i('카메라 이동 실패: ${response.statusCode} / ${response.body}');
-    }
-  }
-
   // 사용자 프로필 조회
   static Future<Map<String, dynamic>> fetchUserProfile(String token) async {
     final url = Uri.parse('$baseUrl/api/profile');
@@ -272,19 +248,28 @@ class ApiService {
     }
   }
 
-  // 카메라 개수 조회
-  static Future<int> fetchCameraCount(String token) async {
-    final url = Uri.parse('$baseUrl/api/profile/cameras/count');
+  // 카메라 이름이 있는 것만 세기
+  static Future<int> fetchCameraCountByName() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('authToken');
+    if (token == null) return 0;
 
     final response = await http.get(
-      url,
-      headers: {'Authorization': 'Bearer $token'},
+      Uri.parse('$baseUrl/api/cameras/user'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
     );
 
-    final responseBody = jsonDecode(utf8.decode(response.bodyBytes));
-
-    if (response.statusCode == 200 && responseBody['success'] == true) {
-      return responseBody['data']['count'] ?? 0;
+    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    if (response.statusCode == 200 && decoded['success'] == true) {
+      final allCameras = List<Map<String, dynamic>>.from(decoded['data']);
+      // cameraName이 null이 아니고 빈 문자열도 아닌 경우만 필터
+      final filtered = allCameras.where(
+        (c) => (c['cameraName'] ?? '').toString().trim().isNotEmpty,
+      );
+      return filtered.length;
     } else {
       return 0;
     }

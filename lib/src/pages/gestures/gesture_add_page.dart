@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../../../services/api_service.dart';
 import '../../components/gesture_func_modal.dart';
-import '../../../utils/shared_pref_helper.dart'; // ✅ 추가
+import '../../../utils/shared_pref_helper.dart';
+import 'package:logger/logger.dart';
+
+final Logger logger = Logger();
 
 class GestureAddPage extends StatefulWidget {
   const GestureAddPage({super.key});
@@ -120,17 +125,43 @@ class _GestureAddPageState extends State<GestureAddPage> {
     if (!mounted) return;
 
     if (result['success']) {
+      // SharedPreferences 저장
       await prefs.setBool('isSetupComplete', true);
       await prefs.setInt('cameraId', cameraId);
       await prefs.setInt('deviceId', deviceId);
       await prefs.setString('deviceIP', deviceIP);
 
-      // ✅ 선택한 기능 SharedPreferences에 저장
       await SharedPrefHelper.saveFunctionForGesture(
         selectedIndex! + 1,
         selectedFunction!,
       );
 
+      // ✅ 디바이스에 제스처 전송
+      final gestureId =
+          selected['image']!.split('/').last.split('.').first; // ex: Gesture_0
+      final deviceUrl = '$deviceIP/register_gesture';
+
+      try {
+        final response = await http.post(
+          Uri.parse(deviceUrl),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'gesture_id': gestureId,
+            'action_id': selectedFunction!,
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          logger.i('디바이스에 제스처 전송 성공');
+        } else {
+          logger.i('디바이스 전송 실패: ${response.statusCode}');
+          logger.i('응답: ${response.body}');
+        }
+      } catch (e) {
+        logger.i('디바이스 통신 오류: $e');
+      }
+
+      // 페이지 이동
       Navigator.pushNamedAndRemoveUntil(
         context,
         '/AddPage',
@@ -163,18 +194,20 @@ class _GestureAddPageState extends State<GestureAddPage> {
       builder:
           (_) => GestureFuncModal(
             selectedFunction: selectedFunction,
-            onSelect: (_) {}, // ✅ 모달에서 pop만 처리
+            onSelect: (_) {}, // 사용되지 않음
           ),
     );
 
-    setState(() {
-      if (selected != null) {
+    if (selected != null) {
+      setState(() {
         selectedFunction = selected;
-      } else {
+      });
+    } else {
+      setState(() {
         selectedIndex = null;
         selectedFunction = null;
-      }
-    });
+      });
+    }
   }
 
   @override
@@ -187,25 +220,59 @@ class _GestureAddPageState extends State<GestureAddPage> {
           children: [
             const SizedBox(height: 12),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back_ios),
-                onPressed: () => Navigator.pop(context),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back_ios),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                  const Center(
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: 'i',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                          TextSpan(
+                            text: 'Catch',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF6A4DFF),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 6),
+            _buildProgressBar(),
+            const SizedBox(height: 32),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 24),
               child: Text(
                 '제스처를 등록해 주세요!',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
             ),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 24),
               child: Text(
-                '제스처를 등록할까요? 사용하실 손동작을 선택해 주세요!',
-                style: TextStyle(fontSize: 16),
+                '사용하실 손동작을 선택해 제스처로 홈캠을 제어해 봐요!',
+                style: TextStyle(fontSize: 14, color: Colors.black54),
               ),
             ),
             const SizedBox(height: 24),
@@ -281,4 +348,28 @@ class _GestureAddPageState extends State<GestureAddPage> {
       ),
     );
   }
+}
+
+Widget _buildProgressBar() {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 24),
+    child: Container(
+      height: 8,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade300,
+        borderRadius: BorderRadius.circular(100),
+      ),
+      child: FractionallySizedBox(
+        alignment: Alignment.centerLeft,
+        widthFactor: 1.0,
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF6A4DFF),
+            borderRadius: BorderRadius.circular(100),
+          ),
+        ),
+      ),
+    ),
+  );
 }

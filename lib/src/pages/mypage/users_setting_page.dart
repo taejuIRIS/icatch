@@ -78,9 +78,14 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('설정'),
-        backgroundColor: Colors.white,
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: Colors.black,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Column(
         children: [

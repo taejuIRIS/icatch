@@ -1,5 +1,8 @@
+//import 'dart:async';
+//import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+//import 'package:http/http.dart' as http;
 
 class CameraMonitorView extends StatefulWidget {
   final String deviceIP;
@@ -14,6 +17,9 @@ class _CameraMonitorViewState extends State<CameraMonitorView> {
   late final WebViewController _controller;
   bool isInitialized = false;
   bool isError = false;
+
+  // Timer? _statusTimer;
+  // String? _previousStatus; // 이전 상태 저장용
 
   @override
   void initState() {
@@ -36,7 +42,7 @@ class _CameraMonitorViewState extends State<CameraMonitorView> {
             ),
           )
           ..loadRequest(
-            Uri.parse(widget.deviceIP),
+            Uri.parse('${widget.deviceIP}/video_feed'),
             headers: {
               'Content-Type': 'application/json',
               'ngrok-skip-browser-warning': 'true',
@@ -44,7 +50,31 @@ class _CameraMonitorViewState extends State<CameraMonitorView> {
           );
 
     setState(() => isInitialized = true);
+
+    // 🔕 블랙스크린 상태 체크 비활성화
+    // _startStatusCheck();
   }
+
+  // void _startStatusCheck() {
+  //   _statusTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+  //     try {
+  //       final res = await http.get(Uri.parse('${widget.deviceIP}/screen_status'));
+
+  //       if (res.statusCode == 200) {
+  //         final status = jsonDecode(res.body); // "on" 또는 "off" 문자열 기대
+
+  //         if (_previousStatus != null && _previousStatus != status) {
+  //           debugPrint('📡 상태 변경 감지됨: $_previousStatus → $status');
+  //           _reloadWebView(); // 상태 변화가 감지되면 새로고침
+  //         }
+
+  //         _previousStatus = status; // 현재 상태를 저장
+  //       }
+  //     } catch (e) {
+  //       debugPrint('📛 screen_status 체크 실패: $e');
+  //     }
+  //   });
+  // }
 
   void _reloadWebView() {
     setState(() {
@@ -52,12 +82,33 @@ class _CameraMonitorViewState extends State<CameraMonitorView> {
     });
 
     _controller.loadRequest(
-      Uri.parse(widget.deviceIP),
+      Uri.parse('${widget.deviceIP}/video_feed'),
       headers: {
         'Content-Type': 'application/json',
         'ngrok-skip-browser-warning': 'true',
       },
     );
+  }
+
+  @override
+  void didUpdateWidget(covariant CameraMonitorView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.deviceIP != widget.deviceIP) {
+      _controller.loadRequest(
+        Uri.parse('${widget.deviceIP}/video_feed'),
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    // _statusTimer?.cancel(); // 타이머 정리
+    super.dispose();
   }
 
   @override

@@ -5,6 +5,7 @@ class CameraListTab extends StatelessWidget {
   final Function(Map<String, dynamic>) onCameraSelected;
   final VoidCallback onAddPressed;
   final int? selectedCameraId;
+  final bool isNewlyAdded;
 
   const CameraListTab({
     super.key,
@@ -12,21 +13,21 @@ class CameraListTab extends StatelessWidget {
     required this.onCameraSelected,
     required this.onAddPressed,
     this.selectedCameraId,
+    this.isNewlyAdded = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final filteredList =
-        cameraList.where((camera) {
-          return camera['cameraName'] != null &&
-              camera['deviceIp'] != null &&
-              camera['deviceIp'].toString().trim().isNotEmpty;
-        }).toList();
+    final filteredList = cameraList;
 
-    // ✅ 기본 선택 없을 경우 첫 번째 카메라 자동 선택
+    // ✅ 기본 선택 없을 경우:
+    // - 새로 등록한 경우는 마지막 카메라 선택
+    // - 일반 진입 시 첫 번째 카메라 선택
     if (filteredList.isNotEmpty && selectedCameraId == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        onCameraSelected(filteredList[0]);
+        final cameraToSelect =
+            isNewlyAdded ? filteredList.last : filteredList.first;
+        onCameraSelected(cameraToSelect);
       });
     }
 

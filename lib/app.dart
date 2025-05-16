@@ -21,6 +21,7 @@ import 'src/pages/personal_page.dart';
 import 'src/pages/album/album_list_page.dart';
 import 'src/pages/album/album_details_page.dart';
 import 'src/pages/notification_page.dart';
+import 'package:frontend1/src/routes/route_observer.dart';
 
 void main() {
   runApp(const MyApp());
@@ -35,6 +36,7 @@ class MyApp extends StatelessWidget {
       title: 'iCatch',
       debugShowCheckedModeBanner: false,
       home: SplashPage(), // 첫 시작 화면
+      navigatorObservers: [routeObserver],
       theme: ThemeData(
         scaffoldBackgroundColor: Colors.white,
         primarySwatch: Colors.deepPurple,

@@ -24,6 +24,27 @@ class _AlbumListPageState extends State<AlbumListPage> {
     _loadPictures();
   }
 
+  // Future<void> _loadPictures() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final token = prefs.getString('authToken');
+  //   final userId = prefs.getInt('userId');
+
+  //   if (token == null || userId == null) return;
+
+  //   try {
+  //     final result = await ApiService.fetchUserPictures(
+  //       token: token,
+  //       userId: userId,
+  //     );
+  //     setState(() {
+  //       pictures = result;
+  //       if (!isEditMode) selectedIds.clear();
+  //     });
+  //   } catch (e) {
+  //     logger.i('사진 불러오기 실패: $e');
+  //   }
+  // }
+
   Future<void> _loadPictures() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('authToken');
@@ -36,8 +57,22 @@ class _AlbumListPageState extends State<AlbumListPage> {
         token: token,
         userId: userId,
       );
+
+      // ✅ 중복 제거: imagePath 기준으로 한 번만 남기기
+      final uniquePaths = <String>{};
+      final filtered =
+          result.where((pic) {
+            final path = pic['imagePath'];
+            if (uniquePaths.contains(path)) {
+              return false;
+            } else {
+              uniquePaths.add(path);
+              return true;
+            }
+          }).toList();
+
       setState(() {
-        pictures = result;
+        pictures = filtered;
         if (!isEditMode) selectedIds.clear();
       });
     } catch (e) {
@@ -102,6 +137,7 @@ class _AlbumListPageState extends State<AlbumListPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         title: const Text('앨범', style: TextStyle(color: Colors.black)),
+        centerTitle: true,
         actions: [
           TextButton(
             onPressed: () {
@@ -117,7 +153,10 @@ class _AlbumListPageState extends State<AlbumListPage> {
             ),
           ),
         ],
-        iconTheme: const IconThemeData(color: Colors.black),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       bottomNavigationBar:
           isEditMode
