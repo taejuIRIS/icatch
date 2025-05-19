@@ -26,31 +26,6 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
     _loadPictures();
   }
 
-  // Future<void> _loadPictures() async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   final token = prefs.getString('authToken');
-  //   final userId = prefs.getInt('userId');
-
-  //   if (token == null || userId == null) return;
-
-  //   try {
-  //     final fetched = await ApiService.fetchUserPictures(
-  //       token: token,
-  //       userId: userId,
-  //     );
-
-  //     final idx = fetched.indexWhere((p) => p['imageId'] == widget.imageId);
-  //     setState(() {
-  //       pictures = fetched;
-  //       currentIndex = idx != -1 ? idx : 0;
-  //       _pageController = PageController(initialPage: currentIndex);
-  //       isLoading = false;
-  //     });
-  //   } catch (e) {
-  //     logger.e('사진 목록 로딩 실패: $e');
-  //     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
-  //   }
-  // }
   Future<void> _loadPictures() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('authToken');
@@ -64,25 +39,10 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         userId: userId,
       );
 
-      // ✅ imagePath 기준 중복 제거 - 첫 항목만 남김
-      final seenPaths = <String>{};
-      final deduplicated = <Map<String, dynamic>>[];
-
-      for (var pic in fetched) {
-        final path = pic['imagePath'];
-        if (!seenPaths.contains(path)) {
-          seenPaths.add(path);
-          deduplicated.add(pic);
-        }
-      }
-
-      // ✅ 전달받은 imageId의 위치 찾기 (중복 제거된 리스트 기준)
-      final idx = deduplicated.indexWhere(
-        (p) => p['imageId'] == widget.imageId,
-      );
+      final idx = fetched.indexWhere((p) => p['imageId'] == widget.imageId);
 
       setState(() {
-        pictures = deduplicated;
+        pictures = fetched;
         currentIndex = idx != -1 ? idx : 0;
         _pageController = PageController(initialPage: currentIndex);
         isLoading = false;
@@ -124,20 +84,29 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
 
     try {
       await ApiService.deletePictureById(token: token, imageId: imageId);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('사진이 삭제되었습니다')));
+
+      // 리스트에서 제거
+      pictures.removeWhere((p) => p['imageId'] == imageId);
+
+      // ✅ 사진이 0개가 되면 화면 닫기
+      if (pictures.isEmpty) {
+        if (mounted) Navigator.pop(context, true);
+        return;
+      }
+
+      // ✅ index 갱신
+      final newIndex = currentIndex.clamp(0, pictures.length - 1);
 
       setState(() {
-        pictures.removeWhere((p) => p['imageId'] == imageId);
-        if (pictures.isEmpty) {
-          Navigator.pop(context);
-        } else {
-          currentIndex = currentIndex.clamp(0, pictures.length - 1);
-          _pageController?.jumpToPage(currentIndex);
-        }
+        currentIndex = newIndex;
+        _pageController = PageController(initialPage: currentIndex); // 🔁 새로 할당
       });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('이미지 삭제 완료')));
     } catch (e) {
+      logger.e('삭제 실패: $e');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('삭제 실패: $e')));
@@ -162,8 +131,11 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         onPageChanged: (index) => setState(() => currentIndex = index),
         itemBuilder: (context, index) {
           final picture = pictures[index];
+          final rawUrl = picture['imageUrl']?.toString() ?? '';
           final imageUrl =
-              'http://ceprj.gachon.ac.kr:60004${picture['imageUrl']}';
+              rawUrl.startsWith('http')
+                  ? rawUrl
+                  : 'http://ceprj.gachon.ac.kr:60004$rawUrl';
           final captureTime = picture['formattedCaptureTime'] ?? '';
           final deviceId = picture['deviceId']?.toString() ?? '정보 없음';
 
@@ -173,7 +145,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                 children: [
                   SizedBox(
                     width: MediaQuery.of(context).size.width,
-                    height: MediaQuery.of(context).size.width, // ✅ 1:1 비율
+                    height: MediaQuery.of(context).size.width,
                     child: Image.network(
                       imageUrl,
                       fit: BoxFit.cover,
@@ -230,9 +202,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
               if (index > 0)
                 Positioned(
                   left: 1,
-                  top:
-                      MediaQuery.of(context).size.width / 2 -
-                      24, // 48 아이콘 사이즈 기준 중앙 정렬
+                  top: MediaQuery.of(context).size.width / 2 - 24,
                   child: IconButton(
                     icon: const Icon(Icons.chevron_left, size: 48),
                     onPressed:
@@ -245,9 +215,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
               if (index < pictures.length - 1)
                 Positioned(
                   right: 1,
-                  top:
-                      MediaQuery.of(context).size.width / 2 -
-                      24, // 48 아이콘 사이즈 기준 중앙 정렬
+                  top: MediaQuery.of(context).size.width / 2 - 24,
                   child: IconButton(
                     icon: const Icon(Icons.chevron_right, size: 48),
                     onPressed:

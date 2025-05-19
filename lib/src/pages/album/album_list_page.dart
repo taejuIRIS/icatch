@@ -24,27 +24,6 @@ class _AlbumListPageState extends State<AlbumListPage> {
     _loadPictures();
   }
 
-  // Future<void> _loadPictures() async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   final token = prefs.getString('authToken');
-  //   final userId = prefs.getInt('userId');
-
-  //   if (token == null || userId == null) return;
-
-  //   try {
-  //     final result = await ApiService.fetchUserPictures(
-  //       token: token,
-  //       userId: userId,
-  //     );
-  //     setState(() {
-  //       pictures = result;
-  //       if (!isEditMode) selectedIds.clear();
-  //     });
-  //   } catch (e) {
-  //     logger.i('사진 불러오기 실패: $e');
-  //   }
-  // }
-
   Future<void> _loadPictures() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('authToken');
@@ -58,25 +37,12 @@ class _AlbumListPageState extends State<AlbumListPage> {
         userId: userId,
       );
 
-      // ✅ 중복 제거: imagePath 기준으로 한 번만 남기기
-      final uniquePaths = <String>{};
-      final filtered =
-          result.where((pic) {
-            final path = pic['imagePath'];
-            if (uniquePaths.contains(path)) {
-              return false;
-            } else {
-              uniquePaths.add(path);
-              return true;
-            }
-          }).toList();
-
       setState(() {
-        pictures = filtered;
+        pictures = result;
         if (!isEditMode) selectedIds.clear();
       });
     } catch (e) {
-      logger.i('사진 불러오기 실패: $e');
+      logger.e('📸 사진 불러오기 실패: $e');
     }
   }
 
@@ -86,15 +52,24 @@ class _AlbumListPageState extends State<AlbumListPage> {
     if (token == null) return;
 
     for (int id in selectedIds) {
-      await ApiService.deletePictureById(token: token, imageId: id);
+      try {
+        await ApiService.deletePictureById(token: token, imageId: id);
+        logger.i('✅ 삭제 성공: $id');
+      } catch (e) {
+        logger.e('❌ 삭제 실패 (imageId: $id): $e');
+      }
     }
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('${selectedIds.length}개 사진 삭제 완료')));
 
     setState(() {
       isEditMode = false;
       selectedIds.clear();
     });
 
-    _loadPictures();
+    await _loadPictures();
   }
 
   void _toggleSelectAll() {
@@ -139,19 +114,22 @@ class _AlbumListPageState extends State<AlbumListPage> {
         title: const Text('앨범', style: TextStyle(color: Colors.black)),
         centerTitle: true,
         actions: [
-          TextButton(
-            onPressed: () {
-              if (isEditMode && pictures.isNotEmpty) {
-                _toggleSelectAll();
-              } else {
-                setState(() => isEditMode = !isEditMode);
-              }
-            },
-            child: Text(
-              isEditMode ? '전체 선택' : '편집',
-              style: const TextStyle(color: Color.fromARGB(255, 166, 166, 166)),
+          if (pictures.isNotEmpty)
+            TextButton(
+              onPressed: () {
+                if (isEditMode) {
+                  _toggleSelectAll();
+                } else {
+                  setState(() => isEditMode = true);
+                }
+              },
+              child: Text(
+                isEditMode ? '전체 선택' : '편집',
+                style: const TextStyle(
+                  color: Color.fromARGB(255, 166, 166, 166),
+                ),
+              ),
             ),
-          ),
         ],
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
@@ -165,11 +143,10 @@ class _AlbumListPageState extends State<AlbumListPage> {
                 child: SizedBox(
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: () {
-                      if (selectedIds.isNotEmpty) {
-                        _confirmDeleteDialog(context); // ✅ 팝업 추가
-                      }
-                    },
+                    onPressed:
+                        selectedIds.isNotEmpty
+                            ? () => _confirmDeleteDialog(context)
+                            : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF6A4DFF),
                       shape: RoundedRectangleBorder(
@@ -203,8 +180,11 @@ class _AlbumListPageState extends State<AlbumListPage> {
                 ),
                 itemBuilder: (context, index) {
                   final pic = pictures[index];
+                  final rawUrl = pic['imageUrl']?.toString() ?? '';
                   final imageUrl =
-                      'http://ceprj.gachon.ac.kr:60004${pic['imageUrl']}';
+                      rawUrl.startsWith('http')
+                          ? rawUrl
+                          : 'http://ceprj.gachon.ac.kr:60004$rawUrl';
                   final imageId = pic['imageId'];
                   final isSelected = selectedIds.contains(imageId);
 

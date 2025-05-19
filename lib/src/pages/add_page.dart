@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../navbar/bottom_navbar.dart';
 import '../../services/api_service.dart';
 import '../../utils/shared_pref_helper.dart';
@@ -14,7 +16,7 @@ String getFunctionDescription(String? code) {
     'hello': '“인사하기👋” 알림 보내기',
     'ok': '“괜찮아~” 알림 보내기',
     'help': '“도와줘!” 알림 보내기',
-    'inconvenient': '“불편해 ㅠㅠ” 알림 보내기',
+    'inconvenient': '“불편해 ㅎㅎ” 알림 보내기',
   };
 
   if (code == null) return '기능 없음';
@@ -74,20 +76,51 @@ class _AddPageState extends State<AddPage> {
     );
 
     if (confirmed == true) {
-      for (final id in _selectedGestureIds) {
-        await ApiService.deleteGesture(id);
-      }
+      final deviceIP = await SharedPrefHelper.getDeviceIP() ?? '192.168.0.100';
+
       setState(() {
-        _selectionMode = false;
-        _selectedGestureIds.clear();
+        _isLoading = true; // ✅ 삭제 중 로딩 표시
       });
-      _loadGestures();
+
+      for (final id in _selectedGestureIds) {
+        try {
+          await ApiService.deleteGesture(id);
+          final gesture = _gestures.firstWhere((g) => g['gestureId'] == id);
+          final imagePath = gesture['gestureImagePath'].toString();
+          final gestureIdForDevice = imagePath.split('/').last.split('.').first;
+
+          final uri = Uri.parse('$deviceIP/delete_gesture');
+          final body = jsonEncode({'gesture_id': gestureIdForDevice});
+
+          final request =
+              http.Request('DELETE', uri)
+                ..headers['Content-Type'] = 'application/json'
+                ..body = body;
+
+          final streamedResponse = await request.send();
+          final responseBody = await streamedResponse.stream.bytesToString();
+
+          if (streamedResponse.statusCode == 200) {
+            logger.i('✅ 디바이스 삭제 성공: $gestureIdForDevice');
+          } else {
+            logger.e(
+              '❌ 디바이스 삭제 실패 (${streamedResponse.statusCode}): $responseBody',
+            );
+          }
+        } catch (e) {
+          logger.e('❌ 삭제 중 오류 발생: $e');
+        }
+      }
+
+      _selectedGestureIds.clear();
+      _selectionMode = false;
+
+      await _loadGestures(); // ✅ 삭제 후 리스트 새로 불러오기
     }
   }
 
   void _onItemTapped(int index) {
     if (index == _selectedIndex) return;
-
     switch (index) {
       case 0:
         Navigator.pushReplacementNamed(context, '/home');
@@ -180,12 +213,9 @@ class _AddPageState extends State<AddPage> {
                           GestureDetector(
                             onTap: () {
                               setState(() {
-                                if (_selectionMode) {
-                                  _selectionMode = false;
+                                _selectionMode = !_selectionMode;
+                                if (!_selectionMode)
                                   _selectedGestureIds.clear();
-                                } else {
-                                  _selectionMode = true;
-                                }
                               });
                             },
                             child: Text(
@@ -211,27 +241,20 @@ class _AddPageState extends State<AddPage> {
                                 final id = gesture['gestureId'];
                                 final imagePath =
                                     gesture['gestureImagePath'].toString();
-                                final isNetworkImage = imagePath.startsWith(
-                                  'http',
-                                );
-                                final isAssetImage = imagePath.startsWith(
-                                  'assets/',
-                                );
                                 final imageWidget =
-                                    isNetworkImage
+                                    imagePath.startsWith('http')
                                         ? Image.network(
                                           imagePath,
                                           width: 64,
                                           height: 64,
                                         )
-                                        : isAssetImage
+                                        : imagePath.startsWith('assets/')
                                         ? Image.asset(
                                           imagePath,
                                           width: 64,
                                           height: 64,
                                         )
                                         : const Icon(Icons.image_not_supported);
-
                                 return FutureBuilder<String?>(
                                   future:
                                       SharedPrefHelper.getFunctionForGesture(
@@ -244,8 +267,6 @@ class _AddPageState extends State<AddPage> {
                                     final functionName = getFunctionDescription(
                                       rawFunction ?? '',
                                     );
-                                    logger.i('👉 제스처 $id 기능 코드: $rawFunction');
-
                                     return GestureDetector(
                                       onLongPress: () {
                                         setState(() {
