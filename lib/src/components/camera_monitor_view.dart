@@ -1,8 +1,8 @@
-//import 'dart:async';
-//import 'dart:convert';
+import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-//import 'package:http/http.dart' as http;
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class CameraMonitorView extends StatefulWidget {
   final String deviceIP;
@@ -14,142 +14,126 @@ class CameraMonitorView extends StatefulWidget {
 }
 
 class _CameraMonitorViewState extends State<CameraMonitorView> {
-  late final WebViewController _controller;
-  bool isInitialized = false;
-  bool isError = false;
-
-  // Timer? _statusTimer;
-  // String? _previousStatus; // 이전 상태 저장용
+  IO.Socket? socket;
+  ui.Image? image;
+  DateTime? _lastFrameTime;
+  bool isDecoding = false;
 
   @override
   void initState() {
     super.initState();
 
-    if (widget.deviceIP.isEmpty) {
-      setState(() => isError = true);
-      return;
-    }
+    debugPrint('🔍 전달받은 deviceIP: ${widget.deviceIP}');
+    if (widget.deviceIP.isEmpty) return;
 
-    _controller =
-        WebViewController()
-          ..setJavaScriptMode(JavaScriptMode.unrestricted)
-          ..setBackgroundColor(Colors.black)
-          ..setNavigationDelegate(
-            NavigationDelegate(
-              onWebResourceError: (error) {
-                setState(() => isError = true);
-              },
-            ),
-          )
-          ..loadRequest(
-            Uri.parse('${widget.deviceIP}/video_feed'),
-            headers: {
-              'Content-Type': 'application/json',
-              'ngrok-skip-browser-warning': 'true',
-            },
-          );
-
-    setState(() => isInitialized = true);
-
-    // 🔕 블랙스크린 상태 체크 비활성화
-    // _startStatusCheck();
+    _initSocket();
   }
 
-  // void _startStatusCheck() {
-  //   _statusTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
-  //     try {
-  //       final res = await http.get(Uri.parse('${widget.deviceIP}/screen_status'));
+  void _initSocket() {
+    final rawUrl = widget.deviceIP.trim();
+    final url = rawUrl.startsWith('http') ? rawUrl : 'http://$rawUrl';
 
-  //       if (res.statusCode == 200) {
-  //         final status = jsonDecode(res.body); // "on" 또는 "off" 문자열 기대
+    debugPrint('📡 소켓 연결 시도: $url');
 
-  //         if (_previousStatus != null && _previousStatus != status) {
-  //           debugPrint('📡 상태 변경 감지됨: $_previousStatus → $status');
-  //           _reloadWebView(); // 상태 변화가 감지되면 새로고침
-  //         }
+    socket?.disconnect();
+    socket?.destroy();
 
-  //         _previousStatus = status; // 현재 상태를 저장
-  //       }
-  //     } catch (e) {
-  //       debugPrint('📛 screen_status 체크 실패: $e');
-  //     }
-  //   });
-  // }
-
-  void _reloadWebView() {
-    setState(() {
-      isError = false;
-    });
-
-    _controller.loadRequest(
-      Uri.parse('${widget.deviceIP}/video_feed'),
-      headers: {
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true',
-      },
+    socket = IO.io(
+      url,
+      IO.OptionBuilder()
+          .setTransports(['websocket'])
+          .setExtraHeaders({'ngrok-skip-browser-warning': 'true'})
+          .disableAutoConnect()
+          .build(),
     );
-  }
 
-  @override
-  void didUpdateWidget(covariant CameraMonitorView oldWidget) {
-    super.didUpdateWidget(oldWidget);
+    socket!
+      ..onConnect((_) {
+        debugPrint('✅ 소켓 연결됨');
+        socket!.emit('start_stream');
+      })
+      ..on('video_frame', (data) {
+        final now = DateTime.now();
+        if (_lastFrameTime != null &&
+            now.difference(_lastFrameTime!) <
+                const Duration(milliseconds: 100)) {
+          return;
+        }
+        _lastFrameTime = now;
 
-    if (oldWidget.deviceIP != widget.deviceIP) {
-      _controller.loadRequest(
-        Uri.parse('${widget.deviceIP}/video_feed'),
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-      );
-    }
+        if (isDecoding) return;
+        isDecoding = true;
+
+        try {
+          if (data is String) {
+            final bytes = base64Decode(data);
+            ui.decodeImageFromList(Uint8List.fromList(bytes), (decodedImg) {
+              if (!mounted) return;
+              setState(() {
+                image = decodedImg;
+                isDecoding = false;
+              });
+              debugPrint('📸 프레임 수신');
+            });
+          } else {
+            throw Exception('잘못된 형식: ${data.runtimeType}');
+          }
+        } catch (e) {
+          debugPrint('❌ 프레임 디코딩 오류: $e');
+          isDecoding = false;
+        }
+      })
+      ..onConnectError((err) {
+        debugPrint('❌ 연결 오류: $err');
+      })
+      ..onDisconnect((_) {
+        debugPrint('⚠️ 소켓 연결 종료됨');
+        // 연결 종료되어도 image는 그대로 유지 (에러 표시 없음)
+      });
+
+    socket!.connect();
   }
 
   @override
   void dispose() {
-    // _statusTimer?.cancel(); // 타이머 정리
+    socket?.disconnect();
+    socket?.destroy();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (isError || widget.deviceIP.isEmpty) {
-      return AspectRatio(
-        aspectRatio: 16 / 9,
-        child: Container(
-          color: Colors.black,
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text(
-                  '카메라 연결에 실패했어요 😢',
-                  style: TextStyle(color: Colors.white),
-                ),
-                const SizedBox(height: 12),
-                ElevatedButton(
-                  onPressed: _reloadWebView,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6A4DFF),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: const Text('다시 시도하기'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
     return AspectRatio(
       aspectRatio: 16 / 9,
       child:
-          isInitialized
-              ? WebViewWidget(controller: _controller)
-              : const Center(child: CircularProgressIndicator()),
+          image != null
+              ? CustomPaint(
+                painter: VideoPainter(image!),
+                child: const SizedBox.expand(),
+              )
+              : const Center(child: Text('영상 수신 중...')),
     );
   }
+}
+
+class VideoPainter extends CustomPainter {
+  final ui.Image image;
+
+  VideoPainter(this.image);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint();
+    final src = Rect.fromLTWH(
+      0,
+      0,
+      image.width.toDouble(),
+      image.height.toDouble(),
+    );
+    final dst = Rect.fromLTWH(0, 0, size.width, size.height);
+    canvas.drawImageRect(image, src, dst, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant VideoPainter oldDelegate) => true;
 }

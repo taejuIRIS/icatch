@@ -143,6 +143,7 @@ class _AddPageState extends State<AddPage> {
     final deviceIP = await SharedPrefHelper.getDeviceIP() ?? '192.168.0.100';
 
     final result = await Navigator.pushNamed(
+      // ignore: use_build_context_synchronously
       context,
       '/GestureAddPage',
       arguments: {
@@ -215,6 +216,7 @@ class _AddPageState extends State<AddPage> {
                               setState(() {
                                 _selectionMode = !_selectionMode;
                                 if (!_selectionMode)
+                                  // ignore: curly_braces_in_flow_control_structures
                                   _selectedGestureIds.clear();
                               });
                             },
@@ -296,8 +298,9 @@ class _AddPageState extends State<AddPage> {
                                                   BorderRadius.circular(12),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: Colors.grey
-                                                      .withOpacity(0.1),
+                                                  color: Colors.grey.withAlpha(
+                                                    (255 * 0.1).round(),
+                                                  ),
                                                   blurRadius: 4,
                                                   offset: const Offset(0, 2),
                                                 ),
@@ -409,7 +412,9 @@ class _AddPageState extends State<AddPage> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.deepPurple.withOpacity(0.25),
+                          color: Colors.deepPurple.withAlpha(
+                            64,
+                          ), // 255 * 0.25 = 약 64
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),

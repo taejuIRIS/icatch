@@ -81,6 +81,8 @@ class _DeviceListPageState extends State<DeviceListPage> {
     await prefs.setInt('deviceId', first['deviceId']);
     await prefs.setString('deviceIP', first['deviceIp'] ?? '');
 
+    if (!mounted) return;
+
     Navigator.pushNamed(
       context,
       '/DeviceQRPage',
@@ -127,7 +129,7 @@ class _DeviceListPageState extends State<DeviceListPage> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
+                  color: Colors.grey.withAlpha((255 * 0.1).round()),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -203,6 +205,10 @@ class _DeviceListPageState extends State<DeviceListPage> {
       body:
           _isLoading
               ? const Center(child: CircularProgressIndicator())
+              : _cameras.isEmpty
+              ? const Center(
+                child: Text('등록된 카메라가 없습니다.', style: TextStyle(fontSize: 16)),
+              )
               : SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,13 +247,6 @@ class _DeviceListPageState extends State<DeviceListPage> {
                         ],
                       ),
                     ),
-                    if (_cameras.isEmpty)
-                      const Center(
-                        child: Padding(
-                          padding: EdgeInsets.only(top: 24),
-                          child: Text('등록된 카메라가 없습니다.'),
-                        ),
-                      ),
                     ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
@@ -278,7 +277,7 @@ class _DeviceListPageState extends State<DeviceListPage> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.deepPurple.withOpacity(0.25),
+                            color: Colors.deepPurple.withAlpha(64),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           ),

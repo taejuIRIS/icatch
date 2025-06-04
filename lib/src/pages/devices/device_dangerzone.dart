@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 import '../../../services/api_service.dart';
+import '../../components/camera_monitor_view.dart';
 
 class DeviceDangerZonePage extends StatefulWidget {
   final int cameraId;
@@ -22,31 +22,6 @@ class DeviceDangerZonePage extends StatefulWidget {
 class _DeviceDangerZonePageState extends State<DeviceDangerZonePage> {
   final List<int> selectedZones = [];
   bool isLoading = false;
-  bool isWebError = false;
-  late final WebViewController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller =
-        WebViewController()
-          ..setJavaScriptMode(JavaScriptMode.unrestricted)
-          ..setBackgroundColor(Colors.white)
-          ..setNavigationDelegate(
-            NavigationDelegate(
-              onWebResourceError: (error) {
-                setState(() => isWebError = true);
-              },
-            ),
-          )
-          ..loadRequest(
-            Uri.parse('${widget.deviceIP}/video_feed'),
-            headers: {
-              'Content-Type': 'application/json',
-              'ngrok-skip-browser-warning': 'true',
-            },
-          );
-  }
 
   void toggleZone(int zone) {
     setState(() {
@@ -67,7 +42,6 @@ class _DeviceDangerZonePageState extends State<DeviceDangerZonePage> {
     }
 
     setState(() => isLoading = true);
-
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('authToken');
 
@@ -104,49 +78,38 @@ class _DeviceDangerZonePageState extends State<DeviceDangerZonePage> {
   }
 
   Widget _buildZoneOverlay() {
-    return Center(
-      child: SizedBox(
-        width: double.infinity,
-        child: AspectRatio(
-          aspectRatio: 16 / 9,
-          child: Stack(
-            children: [
-              if (isWebError)
-                const Center(
-                  child: Text(
-                    '📡 영상 스트리밍을 불러오지 못했어요!',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                )
-              else
-                WebViewWidget(controller: _controller),
-              GridView.count(
-                crossAxisCount: 3,
-                childAspectRatio: 142 / 80,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: EdgeInsets.zero,
-                mainAxisSpacing: 1,
-                crossAxisSpacing: 1,
-                children: List.generate(9, (index) {
-                  final zone = index + 1;
-                  final isSelected = selectedZones.contains(zone);
-                  return GestureDetector(
-                    onTap: () => toggleZone(zone),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color:
-                            isSelected
-                                ? const Color(0x446A4DFF)
-                                : Colors.transparent,
-                        border: Border.all(color: Colors.white, width: 1),
-                      ),
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: Stack(
+        children: [
+          CameraMonitorView(deviceIP: widget.deviceIP),
+          Positioned.fill(
+            child: GridView.count(
+              crossAxisCount: 3,
+              childAspectRatio: 142 / 80,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.zero,
+              mainAxisSpacing: 1,
+              crossAxisSpacing: 1,
+              children: List.generate(9, (index) {
+                final zone = index + 1;
+                final isSelected = selectedZones.contains(zone);
+                return GestureDetector(
+                  onTap: () => toggleZone(zone),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color:
+                          isSelected
+                              ? const Color(0x446A4DFF)
+                              : Colors.transparent,
+                      border: Border.all(color: Colors.white, width: 1),
                     ),
-                  );
-                }),
-              ),
-            ],
+                  ),
+                );
+              }),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -154,6 +117,7 @@ class _DeviceDangerZonePageState extends State<DeviceDangerZonePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: RichText(
           text: const TextSpan(
@@ -186,14 +150,13 @@ class _DeviceDangerZonePageState extends State<DeviceDangerZonePage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      backgroundColor: Colors.white,
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               Container(
                 height: 6,
                 width: double.infinity,
@@ -203,7 +166,7 @@ class _DeviceDangerZonePageState extends State<DeviceDangerZonePage> {
                 ),
                 child: FractionallySizedBox(
                   alignment: Alignment.centerLeft,
-                  widthFactor: 1.0,
+                  widthFactor: 6 / 6,
                   child: Container(
                     decoration: BoxDecoration(
                       color: const Color(0xFF6A4DFF),
@@ -212,23 +175,23 @@ class _DeviceDangerZonePageState extends State<DeviceDangerZonePage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 32),
               const Text(
                 '얼마 안 남았어요!',
                 style: TextStyle(
-                  fontSize: 32,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF090A0A),
                 ),
               ),
               const SizedBox(height: 8),
               const Text(
-                'iCatch는 보호 대상이 위험 구역에 있을 때 사용자 님께\n알림을 보내드려요! 위험 구역을 설정해 볼까요?\n총 9개 구간 중 위험하다고 생각하는 구간을 눌러주세요!',
+                'iCatch는 보호 대상이 위험 구역에 있을 때 사용자 님께\n위험 감지 알림을 보내 드려요! 위험 구역을 설정해 볼까요?\n아홉 개 구간 중 위험하다고 생각하는 구간을 눌러주시면 돼요!',
                 style: TextStyle(fontSize: 16, color: Color(0xFF090A0A)),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               _buildZoneOverlay(),
-              const SizedBox(height: 40),
+              const Spacer(),
               SizedBox(
                 width: double.infinity,
                 height: 56,

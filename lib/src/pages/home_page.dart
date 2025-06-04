@@ -81,12 +81,14 @@ class _HomePageState extends State<HomePage> {
 
     if (userId == null) {
       ScaffoldMessenger.of(
+        // ignore: use_build_context_synchronously
         context,
       ).showSnackBar(const SnackBar(content: Text('로그인 정보가 없습니다.')));
       return;
     }
 
     showDialog(
+      // ignore: use_build_context_synchronously
       context: context,
       builder:
           (_) => AlertDialog(
@@ -176,7 +178,10 @@ class _HomePageState extends State<HomePage> {
         ),
         const SizedBox(height: 10),
         if (_selectedCamera != null && _selectedCamera!['deviceIp'] != null)
-          CameraMonitorView(deviceIP: _selectedCamera!['deviceIp']),
+          CameraMonitorView(
+            key: ValueKey(_selectedCamera!['cameraId']),
+            deviceIP: _selectedCamera!['deviceIp'],
+          ),
         const SizedBox(height: 5),
         if (_selectedCamera != null &&
             _selectedCamera!['cameraId'] != null &&

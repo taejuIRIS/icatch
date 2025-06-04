@@ -199,9 +199,10 @@ class _TargetListPageState extends State<TargetListPage> {
                                           ),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.grey.withOpacity(
-                                                0.1,
-                                              ), // 밝은 그림자 색상
+                                              color: Colors.grey.withAlpha(
+                                                (255 * 0.1).round(),
+                                              ),
+                                              // 밝은 그림자 색상
                                               blurRadius: 6, // 퍼짐 정도
                                               offset: Offset(
                                                 0,
@@ -308,6 +309,7 @@ class _TargetListPageState extends State<TargetListPage> {
                     if (cameraId == null ||
                         deviceId == null ||
                         deviceIP == null) {
+                      // ignore: use_build_context_synchronously
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('기기 정보가 없습니다.')),
                       );
@@ -315,6 +317,7 @@ class _TargetListPageState extends State<TargetListPage> {
                     }
 
                     final result = await Navigator.pushNamed(
+                      // ignore: use_build_context_synchronously
                       context,
                       '/targetsAddPage',
                       arguments: {
@@ -341,7 +344,9 @@ class _TargetListPageState extends State<TargetListPage> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.deepPurple.withOpacity(0.25),
+                          color: Colors.deepPurple.withAlpha(
+                            64,
+                          ), // 255 * 0.25 = 약 64
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),

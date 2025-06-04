@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:logger/logger.dart';
 import 'settings3_camname.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // ✅ 추가
+import '../../components/camera_monitor_view.dart'; // 👈 꼭 import 하세요!
 
 final Logger logger = Logger();
 
@@ -23,9 +23,6 @@ class CheckMonitoringPage extends StatefulWidget {
 }
 
 class _CheckMonitoringPageState extends State<CheckMonitoringPage> {
-  bool isError = false;
-  late final WebViewController _controller;
-
   @override
   void initState() {
     super.initState();
@@ -33,26 +30,6 @@ class _CheckMonitoringPageState extends State<CheckMonitoringPage> {
     logger.i('📡 받은 deviceIP: ${widget.deviceIP}');
     logger.i('📡 받은 cameraId: ${widget.cameraId}');
     logger.i('📡 받은 deviceId: ${widget.deviceId}');
-
-    _controller =
-        WebViewController()
-          ..setJavaScriptMode(JavaScriptMode.unrestricted)
-          ..setBackgroundColor(Colors.white)
-          ..setNavigationDelegate(
-            NavigationDelegate(
-              onWebResourceError: (error) {
-                logger.e('❌ WebView 로딩 실패: ${error.description}');
-                setState(() => isError = true);
-              },
-            ),
-          )
-          ..loadRequest(
-            Uri.parse('${widget.deviceIP}/video_feed'),
-            headers: {
-              'Content-Type': 'application/json',
-              'ngrok-skip-browser-warning': 'true',
-            },
-          );
   }
 
   Future<void> _completeSetupAndGoNext() async {
@@ -60,10 +37,10 @@ class _CheckMonitoringPageState extends State<CheckMonitoringPage> {
     final userId = prefs.getInt('userId');
     if (userId == null) return;
 
-    await prefs.setBool('isSetupComplete_${userId}', true);
-    await prefs.setInt('cameraId_${userId}', widget.cameraId);
-    await prefs.setInt('deviceId_${userId}', widget.deviceId);
-    await prefs.setString('deviceIP_${userId}', widget.deviceIP);
+    await prefs.setBool('isSetupComplete_$userId', true);
+    await prefs.setInt('cameraId_$userId', widget.cameraId);
+    await prefs.setInt('deviceId_$userId', widget.deviceId);
+    await prefs.setString('deviceIP_$userId', widget.deviceIP);
 
     logger.i('✅ 장치 정보 저장 완료');
 
@@ -90,6 +67,7 @@ class _CheckMonitoringPageState extends State<CheckMonitoringPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 상단 뒤로가기
             Padding(
               padding: const EdgeInsets.only(left: 12, top: 12),
               child: IconButton(
@@ -97,6 +75,8 @@ class _CheckMonitoringPageState extends State<CheckMonitoringPage> {
                 onPressed: () => Navigator.pop(context),
               ),
             ),
+
+            // 진행률 바
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Container(
@@ -119,6 +99,8 @@ class _CheckMonitoringPageState extends State<CheckMonitoringPage> {
               ),
             ),
             const SizedBox(height: 32),
+
+            // 타이틀 텍스트
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 24),
               child: Column(
@@ -141,6 +123,8 @@ class _CheckMonitoringPageState extends State<CheckMonitoringPage> {
               ),
             ),
             const SizedBox(height: 24),
+
+            // 실시간 스트리밍 화면
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: ClipRRect(
@@ -148,44 +132,15 @@ class _CheckMonitoringPageState extends State<CheckMonitoringPage> {
                 child: SizedBox(
                   height: 200,
                   width: double.infinity,
-                  child:
-                      isError
-                          ? Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text('영상을 불러오는 데 실패했어요 😢'),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: () {
-                                  logger.i('🔄 WebView 재시도');
-                                  setState(() {
-                                    isError = false;
-                                    _controller.loadRequest(
-                                      Uri.parse(
-                                        '${widget.deviceIP}/video_feed',
-                                      ),
-                                      headers: {
-                                        'Content-Type': 'application/json',
-                                        'ngrok-skip-browser-warning': 'true',
-                                      },
-                                    );
-                                  });
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF6A4DFF),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24),
-                                  ),
-                                ),
-                                child: const Text('다시 시도하기'),
-                              ),
-                            ],
-                          )
-                          : WebViewWidget(controller: _controller),
+                  // child: CameraMonitorView(deviceIP: widget.deviceIP),
+                  child: CameraMonitorView(deviceIP: '${widget.deviceIP}'),
                 ),
               ),
             ),
+
             const Spacer(),
+
+            // Continue 버튼
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
               child: SizedBox(

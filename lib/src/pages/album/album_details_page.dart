@@ -49,6 +49,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
       });
     } catch (e) {
       logger.e('사진 목록 로딩 실패: $e');
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
   }
@@ -103,11 +104,13 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
       });
 
       ScaffoldMessenger.of(
+        // ignore: use_build_context_synchronously
         context,
       ).showSnackBar(const SnackBar(content: Text('이미지 삭제 완료')));
     } catch (e) {
       logger.e('삭제 실패: $e');
       ScaffoldMessenger.of(
+        // ignore: use_build_context_synchronously
         context,
       ).showSnackBar(SnackBar(content: Text('삭제 실패: $e')));
     }

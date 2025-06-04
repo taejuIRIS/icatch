@@ -1,17 +1,37 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:logger/logger.dart';
 
 final Logger logger = Logger();
 
-class JoystickControl extends StatelessWidget {
+class JoystickControl extends StatefulWidget {
   final String deviceIP;
 
   const JoystickControl({super.key, required this.deviceIP});
 
-  Future<void> _handleDirection(String direction) async {
+  @override
+  State<JoystickControl> createState() => _JoystickControlState();
+}
+
+class _JoystickControlState extends State<JoystickControl> {
+  Timer? _repeatTimer;
+
+  void _startRepeating(String direction) {
+    _stopRepeating(); // 이전 타이머 정리
+    _repeatTimer = Timer.periodic(const Duration(milliseconds: 300), (_) {
+      _sendDirection(direction);
+    });
+  }
+
+  void _stopRepeating() {
+    _repeatTimer?.cancel();
+    _repeatTimer = null;
+  }
+
+  Future<void> _sendDirection(String direction) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('authToken');
 
@@ -20,8 +40,7 @@ class JoystickControl extends StatelessWidget {
       return;
     }
 
-    final url = Uri.parse('$deviceIP/servo');
-    // final url = Uri.parse('https://9c7b-210-119-237-42.ngrok-free.app/servo');
+    final url = Uri.parse('http://${widget.deviceIP}/servo');
     final headers = {'Content-Type': 'application/json'};
     final body = jsonEncode({'direction': direction});
 
@@ -40,6 +59,12 @@ class JoystickControl extends StatelessWidget {
   }
 
   @override
+  void dispose() {
+    _stopRepeating();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(top: 32),
@@ -47,7 +72,6 @@ class JoystickControl extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // 바깥 원
             Container(
               width: 240,
               height: 240,
@@ -69,9 +93,9 @@ class JoystickControl extends StatelessWidget {
               ),
             ),
 
-            // 중앙 버튼 (center)
+            // 중앙 버튼 (단일 요청)
             GestureDetector(
-              onTap: () => _handleDirection("center"),
+              onTap: () => _sendDirection("center"),
               child: Container(
                 width: 96,
                 height: 96,
@@ -82,29 +106,39 @@ class JoystickControl extends StatelessWidget {
               ),
             ),
 
-            // 좌측 화살표
+            // 왼쪽 버튼
             Positioned(
               left: 10,
-              child: IconButton(
-                icon: const Icon(
-                  Icons.arrow_left,
-                  size: 40,
-                  color: Color(0xFF6A4DFF),
+              child: GestureDetector(
+                onTapDown: (_) => _startRepeating("left"),
+                onTapUp: (_) => _stopRepeating(),
+                onTapCancel: _stopRepeating,
+                child: Container(
+                  padding: const EdgeInsets.all(16), // 터치 영역 확장
+                  child: const Icon(
+                    Icons.arrow_left,
+                    size: 40,
+                    color: Color(0xFF6A4DFF),
+                  ),
                 ),
-                onPressed: () => _handleDirection("left"),
               ),
             ),
 
-            // 우측 화살표
+            // 오른쪽 버튼
             Positioned(
               right: 10,
-              child: IconButton(
-                icon: const Icon(
-                  Icons.arrow_right,
-                  size: 40,
-                  color: Color(0xFF6A4DFF),
+              child: GestureDetector(
+                onTapDown: (_) => _startRepeating("right"),
+                onTapUp: (_) => _stopRepeating(),
+                onTapCancel: _stopRepeating,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  child: const Icon(
+                    Icons.arrow_right,
+                    size: 40,
+                    color: Color(0xFF6A4DFF),
+                  ),
                 ),
-                onPressed: () => _handleDirection("right"),
               ),
             ),
           ],

@@ -123,7 +123,7 @@ class _SettingsGesturePageState extends State<SettingsGesturePage> {
       final gestureId =
           gesture['image']!.split('/').last.split('.').first; // ex: Gesture_0
       final actionId = selectedFunction!;
-      final deviceUrl = '${widget.deviceIP}/register_gesture';
+      final deviceUrl = 'http://${widget.deviceIP}/register_gesture';
 
       try {
         final deviceRes = await http.post(
@@ -143,6 +143,7 @@ class _SettingsGesturePageState extends State<SettingsGesturePage> {
       }
 
       Navigator.pushNamedAndRemoveUntil(
+        // ignore: use_build_context_synchronously
         context,
         '/home',
         (route) => false,

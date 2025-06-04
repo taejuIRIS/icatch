@@ -76,6 +76,7 @@ class _LoginPageState extends State<LoginPage> {
           deviceIP != null) {
         logger.i('➡️ 홈으로 이동');
         Navigator.pushReplacementNamed(
+          // ignore: use_build_context_synchronously
           context,
           '/home',
           arguments: {
@@ -87,6 +88,7 @@ class _LoginPageState extends State<LoginPage> {
       } else {
         logger.i('➡️ QR 설정 화면으로 이동');
         Navigator.pushReplacementNamed(
+          // ignore: use_build_context_synchronously
           context,
           '/settingsqr',
           arguments: userId,

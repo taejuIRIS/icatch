@@ -16,6 +16,7 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
     final token = prefs.getString('authToken');
     if (token == null) {
       ScaffoldMessenger.of(
+        // ignore: use_build_context_synchronously
         context,
       ).showSnackBar(const SnackBar(content: Text("로그인 토큰이 없습니다.")));
       return;
@@ -27,6 +28,7 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
       if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
     } else {
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("회원 탈퇴 실패: ${result['statusCode']}")),
       );

@@ -61,6 +61,7 @@ class _AlbumListPageState extends State<AlbumListPage> {
     }
 
     ScaffoldMessenger.of(
+      // ignore: use_build_context_synchronously
       context,
     ).showSnackBar(SnackBar(content: Text('${selectedIds.length}개 사진 삭제 완료')));
 

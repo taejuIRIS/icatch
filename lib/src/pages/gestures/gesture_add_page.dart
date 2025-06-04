@@ -139,7 +139,7 @@ class _GestureAddPageState extends State<GestureAddPage> {
       // ✅ 디바이스에 제스처 전송
       final gestureId =
           selected['image']!.split('/').last.split('.').first; // ex: Gesture_0
-      final deviceUrl = '$deviceIP/register_gesture';
+      final deviceUrl = 'http://$deviceIP/register_gesture';
 
       try {
         final response = await http.post(
@@ -163,6 +163,7 @@ class _GestureAddPageState extends State<GestureAddPage> {
 
       // 페이지 이동
       Navigator.pushNamedAndRemoveUntil(
+        // ignore: use_build_context_synchronously
         context,
         '/AddPage',
         (route) => false,
@@ -300,7 +301,9 @@ class _GestureAddPageState extends State<GestureAddPage> {
                             if (isSelected)
                               Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.deepPurple.withOpacity(0.3),
+                                  color: Colors.deepPurple.withAlpha(
+                                    64,
+                                  ), // 255 * 0.25 = 약 64
                                   border: Border.all(
                                     color: Colors.deepPurple,
                                     width: 3,

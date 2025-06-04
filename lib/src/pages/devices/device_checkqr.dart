@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'device_camname.dart'; // 다음 단계로 이동할 페이지 import
+import 'device_camname.dart';
+import '../../components/camera_monitor_view.dart'; // 경로는 실제 위치에 맞게 수정
 
 class DeviceCheckQRPage extends StatefulWidget {
   final int cameraId;
@@ -20,33 +20,6 @@ class DeviceCheckQRPage extends StatefulWidget {
 }
 
 class _DeviceCheckQRPageState extends State<DeviceCheckQRPage> {
-  bool isError = false;
-  late final WebViewController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _controller =
-        WebViewController()
-          ..setJavaScriptMode(JavaScriptMode.unrestricted)
-          ..setBackgroundColor(Colors.white)
-          ..setNavigationDelegate(
-            NavigationDelegate(
-              onWebResourceError: (error) {
-                setState(() => isError = true);
-              },
-            ),
-          )
-          ..loadRequest(
-            Uri.parse('${widget.deviceIP}/video_feed'),
-            headers: {
-              'Content-Type': 'application/json',
-              'ngrok-skip-browser-warning': 'true',
-            },
-          );
-  }
-
   Future<void> _goToNextStep() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isSetup', true);
@@ -149,49 +122,24 @@ class _DeviceCheckQRPageState extends State<DeviceCheckQRPage> {
               ),
             ),
             const SizedBox(height: 24),
+
+            // ✅ 영상 표시 영역 - 재사용 컴포넌트
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(24),
-                child: SizedBox(
+                child: Container(
                   height: 200,
                   width: double.infinity,
-                  child:
-                      isError
-                          ? Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text('영상을 불러오는 데 실패했어요 😢'),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: () {
-                                  setState(() {
-                                    isError = false;
-                                    _controller.loadRequest(
-                                      Uri.parse(
-                                        '${widget.deviceIP}/video_feed',
-                                      ),
-                                      headers: {
-                                        'Content-Type': 'application/json',
-                                        'ngrok-skip-browser-warning': 'true',
-                                      },
-                                    );
-                                  });
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF6A4DFF),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24),
-                                  ),
-                                ),
-                                child: const Text('다시 시도하기'),
-                              ),
-                            ],
-                          )
-                          : WebViewWidget(controller: _controller),
+                  color: Colors.black,
+                  child: CameraMonitorView(
+                    // deviceIP: '${widget.deviceIP}', // ✅ ngrok는 반드시 https
+                    deviceIP: '${widget.deviceIP}',
+                  ),
                 ),
               ),
             ),
+
             const Spacer(),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),

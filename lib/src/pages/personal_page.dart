@@ -89,6 +89,7 @@ class _PersonalPageState extends State<PersonalPage> with RouteAware {
       });
     } else {
       ScaffoldMessenger.of(
+        // ignore: use_build_context_synchronously
         context,
       ).showSnackBar(SnackBar(content: Text(result['message'] ?? '프로필 조회 실패')));
     }
